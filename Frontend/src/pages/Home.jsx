@@ -1,6 +1,7 @@
 import React from "react";
 import WalletCard from "../components/WalletCard";
 import CreatureDisplay from "../components/CreatureDisplay";
+import GainXPButton from "../components/GainXPButton";
 
 export default function Home() {
   return (
@@ -8,6 +9,7 @@ export default function Home() {
       <h1 className="text-4xl font-bold mb-4">🔥 SuiMon Wallet</h1>
       <WalletCard />
       <CreatureDisplay />
+      
     </div>
   );
 }

@@ -6,7 +6,7 @@ import WalletDashboard from './components/WalletDashboard.jsx';
 import CreatureCollection from './components/CreatureCollection.jsx';
 import BattleArena from './components/BattleArena.jsx';
 import Leaderboard from './components/Leaderboard.jsx';
-//import Home from './pages/Home'; // Optional if you still want to use Home later
+import Home from './pages/Home'; // Optional if you still want to use Home later
 
 function App() {
   const [activeTab, setActiveTab] = useState('wallet');
@@ -51,6 +51,12 @@ function App() {
           >
             Leaderboard
           </button>
+          <button
+            onClick={() => setActiveTab('home')}
+            className={`px-4 py-2 rounded-md ${activeTab === 'home' ? 'bg-primary text-white' : 'hover:bg-surface'}`}
+          >
+            Home
+          </button>
         </div>
       </nav>
 
@@ -60,7 +66,7 @@ function App() {
         {activeTab === 'creatures' && <CreatureCollection wallet={wallet} />}
         {activeTab === 'battle' && <BattleArena wallet={wallet} />}
         {activeTab === 'leaderboard' && <Leaderboard wallet={wallet} />}
-        {/* Optional: {activeTab === 'home' && <Home />} */}
+        {activeTab === 'home' && <Home />} 
       </main>
     </div>
   );
