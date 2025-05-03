@@ -3,6 +3,20 @@ import Card from "../components/Card";
 import playerCards from "../data/playerCards"; // Import player cards
 import aiCards from "../data/aiCards"; // Import AI cards
 
+// XP Constants
+const XP_LEVELS = [
+  { level: 1, xpRequired: 0, reward: "Basic Card Pack" },
+  { level: 2, xpRequired: 25, reward: "1 Rare Card" },
+  { level: 3, xpRequired: 75, reward: "Standard Card Pack" },
+  { level: 4, xpRequired: 150, reward: "2 Rare Cards" },
+  { level: 5, xpRequired: 300, reward: "Elite Card Pack" },
+  { level: 6, xpRequired: 500, reward: "1 Ultra Rare Card" },
+  { level: 7, xpRequired: 750, reward: "Premium Card Pack" },
+  { level: 8, xpRequired: 1000, reward: "2 Ultra Rare Cards" },
+  { level: 9, xpRequired: 1500, reward: "Master Card Pack" },
+  { level: 10, xpRequired: 2500, reward: "Legendary Card" }
+];
+
 const cloneCardWithHP = (card) => ({
   ...card,
   currentHP: card.hp,
@@ -40,11 +54,62 @@ const GameBoard = () => {
   const [aiMatchWins, setAiMatchWins] = useState(0);
   const [matchWinner, setMatchWinner] = useState(null);
   const [showMatchAlert, setShowMatchAlert] = useState(false);
+  
+  // XP System
+  const [xp, setXp] = useState(() => parseInt(localStorage.getItem("playerXP")) || 0);
+  const [level, setLevel] = useState(1);
+  const [xpToNextLevel, setXpToNextLevel] = useState(0);
+  const [showLevelUpAlert, setShowLevelUpAlert] = useState(false);
+  const [levelUpReward, setLevelUpReward] = useState("");
 
   // Initialize the game - shuffle deck and set up bench
   useEffect(() => {
     initializeGame();
+    
+    // Initialize level information based on current XP
+    calculateLevel(xp);
   }, []);
+
+  // Calculate player level based on XP
+  const calculateLevel = (currentXp) => {
+    let playerLevel = 1;
+    let nextLevelXp = 0;
+    let reward = "";
+
+    for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+      if (currentXp >= XP_LEVELS[i].xpRequired) {
+        playerLevel = XP_LEVELS[i].level;
+        nextLevelXp = i < XP_LEVELS.length - 1 ? XP_LEVELS[i + 1].xpRequired : null;
+        reward = XP_LEVELS[i].reward;
+        break;
+      }
+    }
+
+    setLevel(playerLevel);
+    setXpToNextLevel(nextLevelXp !== null ? nextLevelXp - currentXp : "MAX");
+    return { playerLevel, nextLevelXp, reward };
+  };
+
+  // Update XP and check for level ups
+  const updateXP = (amount) => {
+    const oldXp = xp;
+    const newXp = oldXp + amount;
+    
+    setXp(newXp);
+    localStorage.setItem("playerXP", newXp);
+    
+    // Check if player leveled up
+    const oldLevel = calculateLevel(oldXp).playerLevel;
+    const newLevelInfo = calculateLevel(newXp);
+    
+    if (newLevelInfo.playerLevel > oldLevel) {
+      setLevelUpReward(newLevelInfo.reward);
+      setShowLevelUpAlert(true);
+      setLog((prev) => [...prev, `🎉 LEVEL UP! You are now level ${newLevelInfo.playerLevel}!`]);
+    }
+    
+    return newXp;
+  };
 
   const initializeGame = () => {
     // Shuffle the player cards
@@ -66,6 +131,11 @@ const GameBoard = () => {
     setWins(newWins);
     localStorage.setItem("wins", newWins);
     
+    // Award XP for winning (random between 5-10)
+    const winXp = Math.floor(Math.random() * 6) + 5;
+    const newXp = updateXP(winXp);
+    setLog((prev) => [...prev, `You earned ${winXp} XP for winning! (Total: ${newXp} XP)`]);
+    
     // Update match wins
     const newPlayerMatchWins = playerMatchWins + 1;
     setPlayerMatchWins(newPlayerMatchWins);
@@ -73,6 +143,11 @@ const GameBoard = () => {
     
     // Check if player has won the match
     if (newPlayerMatchWins >= 4) {
+      // Award bonus XP for winning the match
+      const matchXp = 15;
+      const updatedXp = updateXP(matchXp);
+      setLog((prev) => [...prev, `You earned ${matchXp} bonus XP for winning the match! (Total: ${updatedXp} XP)`]);
+      
       setMatchWinner("player");
       setShowMatchAlert(true);
       setLog((prev) => [...prev, "Congratulations! You won the match!"]);
@@ -84,6 +159,11 @@ const GameBoard = () => {
     setLosses(newLosses);
     localStorage.setItem("losses", newLosses);
     
+    // Award consolation XP for losing (1 XP)
+    const lossXp = 1;
+    const newXp = updateXP(lossXp);
+    setLog((prev) => [...prev, `You earned ${lossXp} XP for participating. (Total: ${newXp} XP)`]);
+    
     // Update AI match wins
     const newAiMatchWins = aiMatchWins + 1;
     setAiMatchWins(newAiMatchWins);
@@ -91,6 +171,11 @@ const GameBoard = () => {
     
     // Check if AI has won the match
     if (newAiMatchWins >= 4) {
+      // Award consolation XP for completing a match
+      const matchXp = 3;
+      const updatedXp = updateXP(matchXp);
+      setLog((prev) => [...prev, `You earned ${matchXp} consolation XP for completing the match. (Total: ${updatedXp} XP)`]);
+      
       setMatchWinner("ai");
       setShowMatchAlert(true);
       setLog((prev) => [...prev, "AI won the match! Better luck next time."]);
@@ -160,62 +245,59 @@ const GameBoard = () => {
     }
   };
 
-  // ... [All your imports and state definitions stay exactly the same]
+  useEffect(() => {
+    checkGameOver();
 
-useEffect(() => {
-  checkGameOver();
+    if (turn === "ai" && !gameOver) {
+      const timeout = setTimeout(() => {
+        const remaining = aiCards.filter((c) => !usedCards.includes(c.id));
 
-  if (turn === "ai" && !gameOver) {
-    const timeout = setTimeout(() => {
-      const remaining = aiCards.filter((c) => !usedCards.includes(c.id));
+        if (!aiCard) {
+          // Only set a new AI card if there's no current one
+          if (remaining.length === 0) {
+            setLog((prev) => [...prev, "AI has no cards left."]);
+            setAiCard(null);
+            setTurn("player");
+            return;
+          }
 
-      if (!aiCard) {
-        // Only set a new AI card if there's no current one
-        if (remaining.length === 0) {
-          setLog((prev) => [...prev, "AI has no cards left."]);
-          setAiCard(null);
+          const aiRandom =
+            remaining[Math.floor(Math.random() * remaining.length)];
+          const aiClone = cloneCardWithHP(aiRandom);
+          setAiCard(aiClone);
+          setUsedCards((prev) => [...prev, aiClone.id]);
+          setLog((prev) => [...prev, `AI played ${aiClone.name}`]);
           setTurn("player");
           return;
         }
 
-        const aiRandom =
-          remaining[Math.floor(Math.random() * remaining.length)];
-        const aiClone = cloneCardWithHP(aiRandom);
-        setAiCard(aiClone);
-        setUsedCards((prev) => [...prev, aiClone.id]);
-        setLog((prev) => [...prev, `AI played ${aiClone.name}`]);
-        setTurn("player");
-        return;
-      }
+        // AI has an active card, so it attacks
+        if (activeCard && aiCard.attacks.length > 0) {
+          const atk =
+            aiCard.attacks[Math.floor(Math.random() * aiCard.attacks.length)];
+          const newHP = activeCard.currentHP - atk.damage;
 
-      // AI has an active card, so it attacks
-      if (activeCard && aiCard.attacks.length > 0) {
-        const atk =
-          aiCard.attacks[Math.floor(Math.random() * aiCard.attacks.length)];
-        const newHP = activeCard.currentHP - atk.damage;
+          setLog((prev) => [
+            ...prev,
+            `AI used ${atk.name} for ${atk.damage} damage!`,
+          ]);
 
-        setLog((prev) => [
-          ...prev,
-          `AI used ${atk.name} for ${atk.damage} damage!`,
-        ]);
-
-        if (newHP <= 0) {
-          setLog((prev) => [...prev, `Your ${activeCard.name} was knocked out!`]);
-          setKnockedOutCards((prev) => [...prev, activeCard]);
-          setActiveCard(null);
-          updateLosses();
-        } else {
-          setActiveCard({ ...activeCard, currentHP: newHP });
+          if (newHP <= 0) {
+            setLog((prev) => [...prev, `Your ${activeCard.name} was knocked out!`]);
+            setKnockedOutCards((prev) => [...prev, activeCard]);
+            setActiveCard(null);
+            updateLosses();
+          } else {
+            setActiveCard({ ...activeCard, currentHP: newHP });
+          }
         }
-      }
 
-      setTurn("player");
-    }, 1200);
+        setTurn("player");
+      }, 1200);
 
-    return () => clearTimeout(timeout);
-  }
-}, [turn]);
-
+      return () => clearTimeout(timeout);
+    }
+  }, [turn]);
 
   const resetGame = () => {
     setActiveCard(null);
@@ -244,9 +326,73 @@ useEffect(() => {
     setShowMatchAlert(false);
   };
 
+  // Close the level up alert
+  const closeLevelUpAlert = () => {
+    setShowLevelUpAlert(false);
+  };
+
+  // Reset XP and levels
+  const resetXP = () => {
+    const confirmed = window.confirm("Reset XP and level progress?");
+    if (confirmed) {
+      localStorage.removeItem("playerXP");
+      setXp(0);
+      calculateLevel(0);
+      setLog((prev) => [...prev, "XP and level progress reset."]);
+    }
+  };
+
+  // Calculate XP progress percentage for the progress bar
+  const getXpProgressPercentage = () => {
+    if (xpToNextLevel === "MAX") return 100;
+    
+    const currentLevelObj = XP_LEVELS.find(l => l.level === level);
+    const nextLevelObj = XP_LEVELS.find(l => l.level === level + 1);
+    
+    if (!nextLevelObj) return 100;
+    
+    const levelMinXp = currentLevelObj.xpRequired;
+    const xpRange = nextLevelObj.xpRequired - levelMinXp;
+    const playerProgress = xp - levelMinXp;
+    
+    return Math.min(100, Math.round((playerProgress / xpRange) * 100));
+  };
+
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold text-center mb-4">Pokémon TCG</h1>
+
+      {/* XP Bar and Level Display */}
+      <div className="mb-6 max-w-2xl mx-auto">
+        <div className="flex justify-between items-center mb-1">
+          <div className="font-bold">Level {level}</div>
+          <div className="text-sm">
+            {xpToNextLevel === "MAX" ? 
+              "MAX LEVEL" : 
+              `${xp} / ${xpToNextLevel + xp} XP to Level ${level + 1}`}
+          </div>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-4">
+          <div 
+            className="bg-blue-600 h-4 rounded-full transition-all duration-500"
+            style={{ width: `${getXpProgressPercentage()}%` }}
+          ></div>
+        </div>
+        <div className="flex justify-between mt-2">
+          <div className="text-sm font-semibold">Rank: {
+            level <= 3 ? "Rookie Trainer" :
+            level <= 5 ? "Skilled Trainer" :
+            level <= 7 ? "Expert Trainer" :
+            level <= 9 ? "Master Trainer" : "Pokémon Champion"
+          }</div>
+          <button 
+            onClick={resetXP}
+            className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
+          >
+            Reset XP
+          </button>
+        </div>
+      </div>
 
       <div className="flex justify-between px-8 mb-6">
         <p className="font-semibold">
@@ -305,6 +451,30 @@ useEffect(() => {
                 className="bg-gray-300 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-400"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Level Up Alert */}
+      {showLevelUpAlert && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-md text-center">
+            <h2 className="text-2xl font-bold mb-4 text-yellow-600">Level Up!</h2>
+            <div className="text-6xl mb-4">🎉</div>
+            <p className="text-xl mb-2">
+              Congratulations! You've reached <strong>Level {level}</strong>!
+            </p>
+            <p className="mb-6">
+              You've unlocked: <strong className="text-blue-600">{levelUpReward}</strong>
+            </p>
+            <div className="flex justify-center">
+              <button
+                onClick={closeLevelUpAlert}
+                className="bg-yellow-500 text-white px-6 py-2 rounded-lg hover:bg-yellow-600"
+              >
+                Awesome!
               </button>
             </div>
           </div>
