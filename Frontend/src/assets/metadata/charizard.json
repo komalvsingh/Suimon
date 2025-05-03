@@ -1,0 +1,18 @@
+{
+  "name": "Charizard",
+  "description": "It spits fire that is hot enough to melt boulders. It may cause forest fires by blowing flames.",
+  "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/6.svg",
+  "weight": 90.5,
+  "height": 1.7,
+  "types": ["fire", "flying"],
+  "abilities": ["blaze", "solar-power"],
+  "stats": {
+    "hp": 78,
+    "attack": 84,
+    "defense": 78,
+    "special-attack": 109,
+    "special-defense": 85,
+    "speed": 100
+  },
+  "external_url": "https://pokeapi.co/api/v2/pokemon/6"
+}
