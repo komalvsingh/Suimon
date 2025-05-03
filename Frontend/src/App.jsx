@@ -6,10 +6,11 @@ import WalletDashboard from "./components/WalletDashboard.jsx";
 import CreatureCollection from "./components/CreatureCollection.jsx";
 import BattleArena from "./components/BattleArena.jsx";
 import Leaderboard from "./components/Leaderboard.jsx";
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import HomePage from './components/HomePage';
-import DetailPage from './components/DetailPage'
-import StarterPickerPage from './pages/StarterPickerPage';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import HomePage from "./components/HomePage";
+import DetailPage from "./components/DetailPage";
+import StarterPickerPage from "./pages/StarterPickerPage";
+import GameBoard from "./pages/GameBoard";
 import Home from "./pages/Home"; // Optional if you still want to use Home later
 
 function App() {
@@ -35,7 +36,9 @@ function App() {
             <button
               onClick={() => setActiveTab("wallet")}
               className={`px-4 py-2 rounded-md ${
-                activeTab === "wallet" ? "text-xl underline font-bold" : "hover:bg-surface"
+                activeTab === "wallet"
+                  ? "text-xl underline font-bold"
+                  : "hover:bg-surface"
               }`}
             >
               Wallet
@@ -43,7 +46,9 @@ function App() {
             <button
               onClick={() => setActiveTab("creatures")}
               className={`px-4 py-2 rounded-md ${
-                activeTab === "creatures" ? "text-xl underline font-bold" : "hover:bg-surface"
+                activeTab === "creatures"
+                  ? "text-xl underline font-bold"
+                  : "hover:bg-surface"
               }`}
             >
               Creatures
@@ -51,7 +56,9 @@ function App() {
             <button
               onClick={() => setActiveTab("battle")}
               className={`px-4 py-2 rounded-md ${
-                activeTab === "battle" ? "text-xl underline font-bold" : "hover:bg-surface"
+                activeTab === "battle"
+                  ? "text-xl underline font-bold"
+                  : "hover:bg-surface"
               }`}
             >
               Battle Arena
@@ -59,7 +66,9 @@ function App() {
             <button
               onClick={() => setActiveTab("leaderboard")}
               className={`px-4 py-2 rounded-md ${
-                activeTab === "leaderboard" ? "text-xl underline font-bold" : "hover:bg-surface"
+                activeTab === "leaderboard"
+                  ? "text-xl underline font-bold"
+                  : "hover:bg-surface"
               }`}
             >
               Leaderboard
@@ -67,15 +76,20 @@ function App() {
             <button
               onClick={() => setActiveTab("home")}
               className={`px-4 py-2 rounded-md ${
-                activeTab === "home" ? "text-xl underline font-bold" : "hover:bg-surface"
+                activeTab === "home"
+                  ? "text-xl underline font-bold"
+                  : "hover:bg-surface"
               }`}
             >
               Home
             </button>
+
             <button
               onClick={() => setActiveTab("pokidesk")}
               className={`px-4 py-2 rounded-md ${
-                activeTab === "pokidesk" ? "text-xl underline font-bold" : "hover:bg-surface"
+                activeTab === "pokidesk"
+                  ? "text-xl underline font-bold"
+                  : "hover:bg-surface"
               }`}
             >
               My PokiDesk
@@ -83,10 +97,22 @@ function App() {
             <button
               onClick={() => setActiveTab("starter-picker")}
               className={`px-4 py-2 rounded-md ${
-                activeTab === "starter-picker" ? "text-xl underline font-bold" : "hover:bg-surface"
+                activeTab === "starter-picker"
+                  ? "text-xl underline font-bold"
+                  : "hover:bg-surface"
               }`}
             >
               Mint Starter
+            </button>
+            <button
+              onClick={() => setActiveTab("tcg")}
+              className={`px-4 py-2 rounded-md ${
+                activeTab === "tcg"
+                  ? "text-xl underline font-bold"
+                  : "hover:bg-surface"
+              }`}
+            >
+              Pokemon Game-tcg
             </button>
           </div>
         </nav>
@@ -99,6 +125,8 @@ function App() {
           {activeTab === "leaderboard" && <Leaderboard wallet={wallet} />}
           {activeTab === "starter-picker" && <StarterPickerPage />}
           {activeTab === "home" && <Home />}
+          {activeTab === "tcg" && <GameBoard />}
+
           {activeTab === "pokidesk" && (
             <Routes>
               <Route path="/" element={<HomePage />} />
