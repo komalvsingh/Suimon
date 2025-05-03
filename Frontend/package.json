@@ -12,12 +12,15 @@
   "dependencies": {
     "@mysten/sui": "^1.26.1",
     "@mysten/sui.js": "^0.54.1",
+    "@react-three/drei": "^10.0.6",
+    "@react-three/fiber": "^9.1.2",
     "@suiet/wallet-kit": "^0.3.4",
     "@tailwindcss/vite": "^4.0.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-lazy-load-image-component": "^1.6.3",
-    "react-router-dom": "^7.5.0"
+    "react-router-dom": "^7.5.0",
+    "three": "^0.175.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

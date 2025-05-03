@@ -7,6 +7,7 @@ import CreatureCollection from './components/CreatureCollection.jsx';
 import BattleArena from './components/BattleArena.jsx';
 import Leaderboard from './components/Leaderboard.jsx';
 import Home from './pages/Home'; // Optional if you still want to use Home later
+import DAO from './pages/DAO.jsx';
 
 function App() {
   const [activeTab, setActiveTab] = useState('wallet');
@@ -57,6 +58,12 @@ function App() {
           >
             Home
           </button>
+          <button
+            onClick={() => setActiveTab('dao')}
+            className={`px-4 py-2 rounded-md ${activeTab === 'dao' ? 'bg-primary text-white' : 'hover:bg-surface'}`}
+          >
+            DAO
+          </button>
         </div>
       </nav>
 
@@ -67,6 +74,7 @@ function App() {
         {activeTab === 'battle' && <BattleArena wallet={wallet} />}
         {activeTab === 'leaderboard' && <Leaderboard wallet={wallet} />}
         {activeTab === 'home' && <Home />} 
+        {activeTab === 'dao' && <DAO/>} 
       </main>
     </div>
   );
