@@ -1,1 +1,12 @@
 @import "tailwindcss";
+body {
+  background-color: rgba(132, 119, 113, 0.159);
+  color: black;
+  font-family: 'MedievalSharp', cursive;
+
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
