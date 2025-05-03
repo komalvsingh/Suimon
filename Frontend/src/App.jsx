@@ -98,6 +98,7 @@ function App() {
           {activeTab === "battle" && <BattleArena wallet={wallet} />}
           {activeTab === "leaderboard" && <Leaderboard wallet={wallet} />}
           {activeTab === "starter-picker" && <StarterPickerPage />}
+          {activeTab === "home" && <Home />}
           {activeTab === "pokidesk" && (
             <Routes>
               <Route path="/" element={<HomePage />} />

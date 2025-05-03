@@ -7,7 +7,7 @@ edition = "2024"  # Set edition to '2024'
 version = "1.47.0"
 
 [addresses]
-suimon = "0xc4767b754f1fccc203162cba417d9def53112a205dc910a4fdf1764d18713155"
+suimon = "0x0"
 
 [dependencies]
 Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet" }

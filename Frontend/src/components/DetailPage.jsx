@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { IoIosArrowBack } from "react-icons/io";
 import { IoIosArrowForward } from "react-icons/io";
 import { RiExpandHeightLine } from "react-icons/ri";
 import { LiaWeightHangingSolid } from "react-icons/lia";
+
+// Import metadata for NFT starters
+import bulbasaurMetadata from '../assets/metadata/bulbasaur.json';
+import charmanderMetadata from '../assets/metadata/charmander.json';
+import squirtleMetadata from '../assets/metadata/squirtle.json';
 
 const typeColors = {
   normal: "#A8A878",
@@ -26,6 +31,12 @@ const typeColors = {
   fairy: "#EE99AC",
 };
 
+// Constants for Pokemon IDs
+const BULBASAUR_ID = 1;
+const CHARMANDER_ID = 4;
+const SQUIRTLE_ID = 7;
+const STARTER_IDS = [BULBASAUR_ID, CHARMANDER_ID, SQUIRTLE_ID];
+
 function DetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -35,8 +46,38 @@ function DetailPage() {
   const [pokemon, setPokemon] = useState(null);
   const [pokemonSpecies, setPokemonSpecies] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isStarter, setIsStarter] = useState(false);
+  const [localMetadata, setLocalMetadata] = useState(null);
 
+  // Check if the Pokemon is a starter (NFT) or regular Pokemon
   useEffect(() => {
+    if (isNaN(pokemonId)) {
+      setError("Invalid Pokemon ID");
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if this is one of our starter NFTs
+    if (STARTER_IDS.includes(pokemonId)) {
+      setIsStarter(true);
+      // Use local metadata for starters
+      switch (pokemonId) {
+        case BULBASAUR_ID:
+          setLocalMetadata(bulbasaurMetadata);
+          break;
+        case CHARMANDER_ID:
+          setLocalMetadata(charmanderMetadata);
+          break;
+        case SQUIRTLE_ID:
+          setLocalMetadata(squirtleMetadata);
+          break;
+        default:
+          break;
+      }
+    }
+    
+    // Continue with regular Pokemon data loading
     if (pokemonId < 1 || pokemonId > MAX_POKEMONS) {
       navigate("/");
       return;
@@ -49,12 +90,14 @@ function DetailPage() {
   const loadPokemon = async (id) => {
     try {
       const [pokemonData, speciesData] = await Promise.all([
-        fetch(`https://pokeapi.co/api/v2/pokemon/${id}`).then((res) =>
-          res.json()
-        ),
-        fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`).then((res) =>
-          res.json()
-        ),
+        fetch(`https://pokeapi.co/api/v2/pokemon/${id}`).then((res) => {
+          if (!res.ok) throw new Error(`Pokemon API error: ${res.status}`);
+          return res.json();
+        }),
+        fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`).then((res) => {
+          if (!res.ok) throw new Error(`Species API error: ${res.status}`);
+          return res.json();
+        }),
       ]);
 
       setPokemon(pokemonData);
@@ -62,6 +105,7 @@ function DetailPage() {
       setIsLoading(false);
     } catch (error) {
       console.error("An error occurred while fetching Pokemon data:", error);
+      setError(error.message);
       setIsLoading(false);
     }
   };
@@ -82,6 +126,7 @@ function DetailPage() {
   };
 
   const capitalizeFirstLetter = (string) => {
+    if (!string) return "";
     return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   };
 
@@ -103,16 +148,29 @@ function DetailPage() {
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div className="loading-container">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="error-container">Error: {error}</div>;
   }
 
   if (!pokemon || !pokemonSpecies) {
-    return <div>Pokemon not found</div>;
+    return <div className="not-found-container">Pokemon not found</div>;
   }
 
+  // Get the main type color
   const mainType = pokemon.types[0].type.name;
   const color = typeColors[mainType] || "#A8A878"; // Default to normal if type not found
   const rgbaColor = rgbaFromHex(color);
+
+  // Custom image URL for starters (NFTs)
+  const getImageUrl = () => {
+    if (isStarter && localMetadata) {
+      return localMetadata.image;
+    }
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/${pokemonId}.svg`;
+  };
 
   return (
     <main
@@ -122,14 +180,15 @@ function DetailPage() {
       <header className="header">
         <div className="header-wrapper">
           <div className="header-wrap">
-            <a href="/" className="back-btn-wrap">
+            <Link to="/" className="back-btn-wrap">
               <IoIosArrowBack className="text-3xl" />
-            </a>
+            </Link>
             <div className="name-wrap">
               <h1 className="name">{capitalizeFirstLetter(pokemon.name)}</h1>
+              {isStarter && <span className="nft-badge">NFT</span>}
             </div>
           </div>
-          <div className="pokemon-id-wrap ">
+          <div className="pokemon-id-wrap">
             <p className="body2-fonts text-3xl">
               #{String(pokemon.id).padStart(3, "0")}
             </p>
@@ -138,34 +197,30 @@ function DetailPage() {
       </header>
       <div className="featured-img">
         {pokemonId > 1 && (
-          <a
-            href="#"
+          <button
             className="arrow left-arrow"
-            onClick={(e) => {
-              e.preventDefault();
-              navigateToPokemon(pokemonId - 1);
-            }}
+            onClick={() => navigateToPokemon(pokemonId - 1)}
           >
             <IoIosArrowBack className="text-3xl" />
-          </a>
+          </button>
         )}
         <div className="detail-img-wrapper">
           <img
-            src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/${pokemonId}.svg`}
+            src={getImageUrl()}
             alt={pokemon.name}
+            onError={(e) => {
+              // Fallback image if the main one fails to load
+              e.target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`;
+            }}
           />
         </div>
         {pokemonId < MAX_POKEMONS && (
-          <a
-            href="#"
+          <button
             className="arrow right-arrow"
-            onClick={(e) => {
-              e.preventDefault();
-              navigateToPokemon(pokemonId + 1);
-            }}
+            onClick={() => navigateToPokemon(pokemonId + 1)}
           >
             <IoIosArrowForward className="text-3xl" />
-          </a>
+          </button>
         )}
       </div>
       <div className="detail-card-detail-wrapper">
@@ -191,7 +246,7 @@ function DetailPage() {
           </div>
           <div className="pokemon-detail-wrap">
             <div className="pokemon-detail">
-            <RiExpandHeightLine />
+              <RiExpandHeightLine />
               <p className="body3-fonts height">{pokemon.height / 10}m</p>
             </div>
             <p className="caption-fonts">Height</p>
@@ -200,7 +255,7 @@ function DetailPage() {
             <div className="pokemon-detail move">
               {pokemon.abilities.map((abilityInfo) => (
                 <p key={abilityInfo.ability.name} className="body3-fonts">
-                  {abilityInfo.ability.name}
+                  {capitalizeFirstLetter(abilityInfo.ability.name)}
                 </p>
               ))}
             </div>
@@ -208,7 +263,7 @@ function DetailPage() {
           </div>
         </div>
         <p className="body3-fonts pokemon-description">
-          {getEnglishFlavorText(pokemonSpecies)}
+          {isStarter && localMetadata ? localMetadata.description : getEnglishFlavorText(pokemonSpecies)}
         </p>
         <p className="body2-fonts about-text">Base Stats</p>
         <div className="stats-wrapper">
@@ -228,18 +283,11 @@ function DetailPage() {
                 value={statInfo.base_stat}
                 max="100"
                 className="progress-bar"
-                style={{ color: color }}
+                style={{ 
+                  "--progress-color": color,
+                  "--progress-bg-color": `rgba(${rgbaColor}, 0.5)`
+                }}
               />
-              <style>
-                {`
-                  .stats-wrap .progress-bar::-webkit-progress-bar {
-                    background-color: rgba(${rgbaColor}, 0.5);
-                  }
-                  .stats-wrap .progress-bar::-webkit-progress-value {
-                    background-color: ${color};
-                  }
-                `}
-              </style>
             </div>
           ))}
         </div>
