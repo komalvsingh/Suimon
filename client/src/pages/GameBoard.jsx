@@ -160,63 +160,62 @@ const GameBoard = () => {
     }
   };
 
-  useEffect(() => {
-    checkGameOver();
+  // ... [All your imports and state definitions stay exactly the same]
 
-    if (turn === "ai" && !gameOver) {
-      const timeout = setTimeout(() => {
-        const remaining = aiCards.filter((c) => !usedCards.includes(c.id)); // Check for AI's unused cards
+useEffect(() => {
+  checkGameOver();
 
+  if (turn === "ai" && !gameOver) {
+    const timeout = setTimeout(() => {
+      const remaining = aiCards.filter((c) => !usedCards.includes(c.id));
+
+      if (!aiCard) {
+        // Only set a new AI card if there's no current one
         if (remaining.length === 0) {
-          // If AI has no remaining cards
           setLog((prev) => [...prev, "AI has no cards left."]);
           setAiCard(null);
           setTurn("player");
-          return; // Skip AI's actions if no cards are left
+          return;
         }
 
         const aiRandom =
           remaining[Math.floor(Math.random() * remaining.length)];
-
-        if (aiRandom) {
-          const aiClone = cloneCardWithHP(aiRandom);
-          setAiCard(aiClone);
-          setUsedCards((prev) => [...prev, aiClone.id]);
-          setLog((prev) => [...prev, `AI played ${aiClone.name}`]);
-
-          if (activeCard && aiClone.attacks.length > 0) {
-            const atk =
-              aiClone.attacks[
-                Math.floor(Math.random() * aiClone.attacks.length)
-              ];
-            const newHP = activeCard.currentHP - atk.damage;
-
-            setLog((prev) => [
-              ...prev,
-              `AI used ${atk.name} for ${atk.damage} damage!`,
-            ]);
-
-            if (newHP <= 0) {
-              setLog((prev) => [
-                ...prev,
-                `Your ${activeCard.name} was knocked out!`,
-              ]);
-              // Add knocked out card to player's knocked out pile
-              setKnockedOutCards(prev => [...prev, activeCard]);
-              setActiveCard(null);
-              updateLosses();
-            } else {
-              setActiveCard({ ...activeCard, currentHP: newHP });
-            }
-          }
-        }
-
+        const aiClone = cloneCardWithHP(aiRandom);
+        setAiCard(aiClone);
+        setUsedCards((prev) => [...prev, aiClone.id]);
+        setLog((prev) => [...prev, `AI played ${aiClone.name}`]);
         setTurn("player");
-      }, 1200);
+        return;
+      }
 
-      return () => clearTimeout(timeout);
-    }
-  }, [turn]);
+      // AI has an active card, so it attacks
+      if (activeCard && aiCard.attacks.length > 0) {
+        const atk =
+          aiCard.attacks[Math.floor(Math.random() * aiCard.attacks.length)];
+        const newHP = activeCard.currentHP - atk.damage;
+
+        setLog((prev) => [
+          ...prev,
+          `AI used ${atk.name} for ${atk.damage} damage!`,
+        ]);
+
+        if (newHP <= 0) {
+          setLog((prev) => [...prev, `Your ${activeCard.name} was knocked out!`]);
+          setKnockedOutCards((prev) => [...prev, activeCard]);
+          setActiveCard(null);
+          updateLosses();
+        } else {
+          setActiveCard({ ...activeCard, currentHP: newHP });
+        }
+      }
+
+      setTurn("player");
+    }, 1200);
+
+    return () => clearTimeout(timeout);
+  }
+}, [turn]);
+
 
   const resetGame = () => {
     setActiveCard(null);
