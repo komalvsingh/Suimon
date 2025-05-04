@@ -3,9 +3,15 @@ import Card from "../components/Card";
 import playerCards from "../data/playerCards"; // Import player cards
 import aiCards from "../data/aiCards"; // Import AI cards
 import { TransactionBlock } from "@mysten/sui.js/transactions"; // Import the TransactionBlock for Sui transactions
+import { SuiClient } from "@mysten/sui.js/client"; // Import SuiClient for fetching NFTs
 
 // Contract address from the BattleArena.js file
 const CONTRACT_ADDRESS = "0x70217963607936caee034ce016fb2e9be0debc644d13a6ac40d955940e1066a7";
+
+// Create a SuiClient instance for testnet
+const TESTNET_CLIENT = new SuiClient({
+  url: "https://fullnode.testnet.sui.io",
+});
 
 // XP Constants
 const XP_LEVELS = [
@@ -76,6 +82,15 @@ const GameBoard = ({ wallet }) => {
     // Initialize level information based on current XP
     calculateLevel(xp);
   }, []);
+  
+  // Log when wallet changes to help debug
+  useEffect(() => {
+    console.log("GameBoard: Wallet prop changed:", { 
+      connected: wallet?.connected, 
+      hasAccount: !!wallet?.account,
+      address: wallet?.account?.address
+    });
+  }, [wallet]);
 
   // Calculate player level based on XP
   const calculateLevel = (currentXp) => {
@@ -120,7 +135,11 @@ const GameBoard = ({ wallet }) => {
 
   // Function to train creature on blockchain (from BattleArena.js)
   const trainCreature = async (xpAmount) => {
+    console.log("trainCreature called with xpAmount:", xpAmount);
+    console.log("Wallet status:", { connected: wallet?.connected, hasAccount: !!wallet?.account });
+    
     if (!wallet || !wallet.connected || !wallet.account) {
+      console.log("Wallet not connected, skipping blockchain XP gain");
       setLog((prev) => [...prev, "Wallet not connected. Blockchain XP gain skipped."]);
       return;
     }
@@ -128,12 +147,15 @@ const GameBoard = ({ wallet }) => {
     // Get the first creature from wallet (simplification - in a real app you'd want to select)
     try {
       setTraining(true);
+      setLog((prev) => [...prev, `🔄 Initiating blockchain training (${xpAmount} XP)...`]);
       
       // Create a transaction block
       const txb = new TransactionBlock();
+      console.log("Transaction block created");
       
-      // Get the creature objects from wallet
-      const nfts = await wallet.client.getOwnedObjects({
+      // Get the creature objects from wallet using TESTNET_CLIENT instead of wallet.client
+      console.log("Fetching owned objects from wallet:", wallet.account.address);
+      const nfts = await TESTNET_CLIENT.getOwnedObjects({
         owner: wallet.account.address,
         options: {
           showContent: true,
@@ -141,16 +163,23 @@ const GameBoard = ({ wallet }) => {
         },
       });
       
+      console.log("NFTs found in wallet:", nfts.data.length);
+      
       // Find a valid creature to train
       const creature = nfts.data.find((obj) => {
         const type = obj.data?.type;
-        return type && (type.includes("starter_nft") || type.includes("suimon") || type.includes("creature"));
+        const isTrainable = type && (type.includes("starter_nft") || type.includes("suimon") || type.includes("creature"));
+        console.log("Checking NFT:", { objectId: obj.data?.objectId, type, isTrainable });
+        return isTrainable;
       });
       
       if (!creature) {
+        console.log("No trainable creatures found in wallet");
         setLog((prev) => [...prev, "No trainable creatures found in wallet."]);
         return;
       }
+      
+      console.log("Found trainable creature:", creature.data.objectId);
       
       // Call the gain_experience function on the smart contract
       txb.moveCall({
@@ -161,11 +190,14 @@ const GameBoard = ({ wallet }) => {
         ],
       });
       
+      console.log("Move call prepared, executing transaction...");
+      
       // Execute the transaction
       const { response } = await wallet.signAndExecuteTransactionBlock({
         transactionBlock: txb,
       });
       
+      console.log("Transaction successful:", response);
       setLog((prev) => [...prev, `🎮 Blockchain training successful! Your creature gained ${xpAmount} XP on-chain.`]);
     } catch (err) {
       console.error("Training transaction failed:", err);
@@ -216,12 +248,21 @@ const GameBoard = ({ wallet }) => {
       setShowMatchAlert(true);
       setLog((prev) => [...prev, "Congratulations! You won the match!"]);
       
-      try {
-        // 👇 Trigger on-chain XP gain transaction
-        await trainCreature(matchXp);
-      } catch (err) {
-        console.error("Failed to train creature after match win:", err);
-        setLog((prev) => [...prev, `⚠️ Blockchain XP transaction failed: ${err.message}`]);
+      console.log("Match won, attempting to train creature with XP:", matchXp);
+      console.log("Current wallet state:", { wallet, connected: wallet?.connected, hasAccount: !!wallet?.account });
+      
+      if (wallet && wallet.connected && wallet.account) {
+        try {
+          // 👇 Trigger on-chain XP gain transaction
+          setLog((prev) => [...prev, "🔄 Preparing blockchain XP transaction..."]);
+          await trainCreature(matchXp);
+        } catch (err) {
+          console.error("Failed to train creature after match win:", err);
+          setLog((prev) => [...prev, `⚠️ Blockchain XP transaction failed: ${err.message}`]);
+        }
+      } else {
+        console.log("Wallet not connected, skipping trainCreature call");
+        setLog((prev) => [...prev, "💡 Connect your wallet to earn XP on the blockchain!"]);
       }
     }
   };
