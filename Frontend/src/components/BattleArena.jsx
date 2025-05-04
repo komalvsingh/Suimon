@@ -1,27 +1,30 @@
-import { useState, useEffect } from 'react';
-import { TransactionBlock } from '@mysten/sui.js/transactions';
-import { SuiClient } from '@mysten/sui.js/client';
-import { ConnectButton } from '@suiet/wallet-kit';
-import { LazyLoadImage } from 'react-lazy-load-image-component';
+import { useState, useEffect } from "react";
+import { TransactionBlock } from "@mysten/sui.js/transactions";
+import { SuiClient } from "@mysten/sui.js/client";
+import { ConnectButton } from "@suiet/wallet-kit";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
-const TESTNET_CLIENT = new SuiClient({ url: 'https://fullnode.testnet.sui.io' });
-const CONTRACT_ADDRESS = '0x70217963607936caee034ce016fb2e9be0debc644d13a6ac40d955940e1066a7'; // Replace with your actual package ID where the smart contract is deployed
+const TESTNET_CLIENT = new SuiClient({
+  url: "https://fullnode.testnet.sui.io",
+});
+const CONTRACT_ADDRESS =
+  "0x70217963607936caee034ce016fb2e9be0debc644d13a6ac40d955940e1066a7"; // Replace with your actual package ID where the smart contract is deployed
 
 const BattleArena = ({ wallet }) => {
   const [creatures, setCreatures] = useState([]);
   const [selectedCreature, setSelectedCreature] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [training, setTraining] = useState(false);
   const [trainingAmount, setTrainingAmount] = useState(10);
 
   // Difficulty levels and their corresponding XP rewards
   const difficultyLevels = [
-    { name: 'Easy', xp: 10, color: 'green' },
-    { name: 'Medium', xp: 25, color: 'yellow' },
-    { name: 'Hard', xp: 50, color: 'orange' },
-    { name: 'Expert', xp: 100, color: 'red' }
+    { name: "Easy", xp: 10, color: "green" },
+    { name: "Medium", xp: 25, color: "yellow" },
+    { name: "Hard", xp: 50, color: "orange" },
+    { name: "Expert", xp: 100, color: "red" },
   ];
 
   useEffect(() => {
@@ -37,51 +40,52 @@ const BattleArena = ({ wallet }) => {
     if (!wallet.connected || !wallet.account) return;
 
     setIsLoading(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
       const nfts = await TESTNET_CLIENT.getOwnedObjects({
         owner: wallet.account.address,
-        options: { 
+        options: {
           showContent: true,
           showType: true,
-          showDisplay: true 
+          showDisplay: true,
         },
       });
 
       if (!nfts.data || nfts.data.length === 0) {
-        setError('No digital collectibles found in your wallet.');
+        setError("No digital collectibles found in your wallet.");
         setCreatures([]);
         return;
       }
 
       // Filter for creatures that match our contract type
-      const filteredCreatures = nfts.data.filter(obj => {
+      const filteredCreatures = nfts.data.filter((obj) => {
         const type = obj.data?.type;
-        return type && (
-          type.includes('starter_nft') ||
-          type.includes('suimon') ||
-          type.includes('creature')
+        return (
+          type &&
+          (type.includes("starter_nft") ||
+            type.includes("suimon") ||
+            type.includes("creature"))
         );
       });
 
       if (filteredCreatures.length === 0) {
-        setError('No trainable creatures found in your wallet.');
+        setError("No trainable creatures found in your wallet.");
         setCreatures([]);
         return;
       }
 
       // Process the creature data
-      const processedCreatures = filteredCreatures.map(nft => {
+      const processedCreatures = filteredCreatures.map((nft) => {
         const data = nft.data;
         const content = data.content?.fields || {};
         const display = data.display?.data?.fields || {};
 
         return {
           id: data.objectId,
-          name: content.name || display.name || 'Unnamed Creature',
-          image: content.image_url || display.image_url || '',
+          name: content.name || display.name || "Unnamed Creature",
+          image: content.image_url || display.image_url || "",
           experience: content.experience || 0,
           level: content.evolution_stage || 0,
           power: content.power || content.experience || 0,
@@ -94,7 +98,7 @@ const BattleArena = ({ wallet }) => {
         setSelectedCreature(processedCreatures[0]);
       }
     } catch (err) {
-      console.error('Error loading collectibles:', err);
+      console.error("Error loading collectibles:", err);
       setError(`Failed to load your digital collectibles: ${err.message}`);
     } finally {
       setIsLoading(false);
@@ -103,63 +107,68 @@ const BattleArena = ({ wallet }) => {
 
   const getElementType = (id) => {
     const numId = parseInt(id);
-    if (numId >= 1 && numId <= 3) return 'nature';
-    if (numId >= 4 && numId <= 6) return 'flame';
-    if (numId >= 7 && numId <= 9) return 'aqua';
-    return 'normal';
+    if (numId >= 1 && numId <= 3) return "nature";
+    if (numId >= 4 && numId <= 6) return "flame";
+    if (numId >= 7 && numId <= 9) return "aqua";
+    return "normal";
   };
 
   const getTypeColor = (type) => {
-    switch(type) {
-      case 'nature': return 'bg-green-500/20 text-green-500';
-      case 'flame': return 'bg-red-500/20 text-red-500';
-      case 'aqua': return 'bg-blue-500/20 text-blue-500';
-      default: return 'bg-gray-500/20 text-gray-500';
+    switch (type) {
+      case "nature":
+        return "bg-green-500/20 text-green-500";
+      case "flame":
+        return "bg-red-500/20 text-red-500";
+      case "aqua":
+        return "bg-blue-500/20 text-blue-500";
+      default:
+        return "bg-gray-500/20 text-gray-500";
     }
   };
 
   const startTraining = async (difficultyXp) => {
     if (!selectedCreature || !wallet.connected) return;
-    
+
     setTraining(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setTrainingAmount(difficultyXp);
-    
+
     try {
       // Create a transaction block
       const txb = new TransactionBlock();
-      
+
       // Call the gain_experience function on the smart contract
       txb.moveCall({
         target: `${CONTRACT_ADDRESS}::starter_nft::gain_experience`,
         arguments: [
           txb.object(selectedCreature.id), // NFT object ID
-          txb.pure(difficultyXp)           // Experience amount to gain
+          txb.pure(difficultyXp), // Experience amount to gain
         ],
       });
-      
+
       // Execute the transaction
       const { response } = await wallet.signAndExecuteTransactionBlock({
         transactionBlock: txb,
       });
-      
-      console.log('Training transaction successful:', response);
-      setSuccess(`Training complete! Your creature gained ${difficultyXp} experience points.`);
-      
+
+      console.log("Training transaction successful:", response);
+      setSuccess(
+        `Training complete! Your creature gained ${difficultyXp} experience points.`
+      );
+
       // Update the selected creature's experience locally
       setSelectedCreature({
         ...selectedCreature,
-        experience: selectedCreature.experience + difficultyXp
+        experience: selectedCreature.experience + difficultyXp,
       });
-      
+
       // Refresh the creature list to get updated data from the blockchain
       setTimeout(() => {
         fetchUserCreatures();
       }, 2000);
-      
     } catch (err) {
-      console.error('Training transaction failed:', err);
+      console.error("Training transaction failed:", err);
       setError(`Training failed: ${err.message}`);
     } finally {
       setTraining(false);
@@ -174,15 +183,15 @@ const BattleArena = ({ wallet }) => {
   };
 
   const getEvolutionStage = (level, exp) => {
-    if (level >= 2) return 'Final Form';
-    if (level === 1) return 'Evolved Form';
-    return 'Basic Form';
+    if (level >= 2) return "Final Form";
+    if (level === 1) return "Evolved Form";
+    return "Basic Form";
   };
 
   const getProgressToNextLevel = (exp) => {
     if (exp < 100) return `${exp}/100 XP to evolve`;
     if (exp < 300) return `${exp}/300 XP to final form`;
-    return 'Maximum evolution reached';
+    return "Maximum evolution reached";
   };
 
   return (
@@ -190,7 +199,10 @@ const BattleArena = ({ wallet }) => {
       {!wallet.connected ? (
         <div className="bg-surface p-6 rounded-lg shadow text-center">
           <h2 className="text-xl font-bold mb-4">Training Arena</h2>
-          <p className="mb-4">Connect your wallet to train your creatures and help them grow stronger.</p>
+          <p className="mb-4">
+            Connect your wallet to train your creatures and help them grow
+            stronger.
+          </p>
           <ConnectButton />
         </div>
       ) : isLoading ? (
@@ -204,7 +216,7 @@ const BattleArena = ({ wallet }) => {
               <p>{error}</p>
             </div>
           )}
-          
+
           {success && (
             <div className="bg-green-500/10 border border-green-500 p-4 rounded-lg text-green-500 mb-4">
               <p>{success}</p>
@@ -213,7 +225,10 @@ const BattleArena = ({ wallet }) => {
 
           <div className="bg-surface p-6 rounded-lg shadow mb-4">
             <h2 className="text-xl font-bold mb-4">Training Arena</h2>
-            <p className="text-gray-400 mb-6">Select a creature to train and choose a difficulty level. Higher difficulties grant more experience points!</p>
+            <p className="text-gray-400 mb-6">
+              Select a creature to train and choose a difficulty level. Higher
+              difficulties grant more experience points!
+            </p>
 
             {/* Creature Selection */}
             {creatures.length > 0 ? (
@@ -225,7 +240,9 @@ const BattleArena = ({ wallet }) => {
                       key={creature.id}
                       onClick={() => setSelectedCreature(creature)}
                       className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden ${
-                        selectedCreature?.id === creature.id ? 'ring-2 ring-primary' : 'opacity-70'
+                        selectedCreature?.id === creature.id
+                          ? "ring-2 ring-primary"
+                          : "opacity-70"
                       }`}
                     >
                       {creature.image ? (
@@ -236,7 +253,9 @@ const BattleArena = ({ wallet }) => {
                         />
                       ) : (
                         <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                          <span className="text-xs">{creature.name.substring(0, 3)}</span>
+                          <span className="text-xs">
+                            {creature.name.substring(0, 3)}
+                          </span>
                         </div>
                       )}
                     </button>
@@ -260,7 +279,9 @@ const BattleArena = ({ wallet }) => {
                           src={selectedCreature.image}
                           alt={selectedCreature.name}
                           className="w-full h-full object-contain"
-                          placeholder={<div className="w-full h-full bg-gray-600 animate-pulse" />}
+                          placeholder={
+                            <div className="w-full h-full bg-gray-600 animate-pulse" />
+                          }
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -268,24 +289,41 @@ const BattleArena = ({ wallet }) => {
                         </div>
                       )}
                     </div>
-                    <h2 className="text-xl font-bold mb-1">{selectedCreature.name}</h2>
-                    <span className={`px-2 py-1 rounded text-xs mb-3 ${getTypeColor(selectedCreature.elementType)}`}>
+                    <h2 className="text-xl font-bold mb-1">
+                      {selectedCreature.name}
+                    </h2>
+                    <span
+                      className={`px-2 py-1 rounded text-xs mb-3 ${getTypeColor(
+                        selectedCreature.elementType
+                      )}`}
+                    >
                       {selectedCreature.elementType}
                     </span>
-                    
+
                     <div className="w-full">
                       <div className="text-sm text-gray-400 flex justify-between mb-1">
-                        <span>{getEvolutionStage(selectedCreature.level, selectedCreature.experience)}</span>
-                        <span>{getProgressToNextLevel(selectedCreature.experience)}</span>
+                        <span>
+                          {getEvolutionStage(
+                            selectedCreature.level,
+                            selectedCreature.experience
+                          )}
+                        </span>
+                        <span>
+                          {getProgressToNextLevel(selectedCreature.experience)}
+                        </span>
                       </div>
                       <div className="w-full bg-gray-700 rounded-full h-2 mb-4">
                         <div
                           className="bg-primary h-2 rounded-full"
-                          style={{ width: `${calculateProgress(selectedCreature.experience)}%` }}
+                          style={{
+                            width: `${calculateProgress(
+                              selectedCreature.experience
+                            )}%`,
+                          }}
                         />
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4 w-full">
                       <div className="bg-gray-700 p-2 rounded text-center">
                         <p className="text-xs text-gray-400">Form</p>
@@ -293,7 +331,9 @@ const BattleArena = ({ wallet }) => {
                       </div>
                       <div className="bg-gray-700 p-2 rounded text-center">
                         <p className="text-xs text-gray-400">XP</p>
-                        <p className="font-bold">{selectedCreature.experience}</p>
+                        <p className="font-bold">
+                          {selectedCreature.experience}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -307,18 +347,28 @@ const BattleArena = ({ wallet }) => {
                           onClick={() => startTraining(level.xp)}
                           disabled={training}
                           className={`p-4 rounded-lg bg-gray-700 hover:bg-gray-600 flex flex-col items-center justify-center transition-all ${
-                            training && trainingAmount === level.xp ? 'ring-2 ring-primary animate-pulse' : ''
+                            training && trainingAmount === level.xp
+                              ? "ring-2 ring-primary animate-pulse"
+                              : ""
                           }`}
                         >
-                          <span className={`text-${level.color}-500 font-bold text-lg`}>{level.name}</span>
-                          <span className="text-sm text-gray-400 mt-1">Gain {level.xp} XP</span>
+                          <span
+                            className={`text-${level.color}-500 font-bold text-lg`}
+                          >
+                            {level.name}
+                          </span>
+                          <span className="text-sm text-gray-400 mt-1">
+                            Gain {level.xp} XP
+                          </span>
                         </button>
                       ))}
                     </div>
 
                     {training && (
                       <div className="mt-6 text-center">
-                        <p className="text-primary animate-pulse">Training in progress...</p>
+                        <p className="text-primary animate-pulse">
+                          Training in progress...
+                        </p>
                       </div>
                     )}
                   </div>

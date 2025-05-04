@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import Card from "../components/Card";
 import playerCards from "../data/playerCards"; // Import player cards
 import aiCards from "../data/aiCards"; // Import AI cards
+import { TransactionBlock } from "@mysten/sui.js/transactions"; // Import the TransactionBlock for Sui transactions
+
+// Contract address from the BattleArena.js file
+const CONTRACT_ADDRESS = "0x70217963607936caee034ce016fb2e9be0debc644d13a6ac40d955940e1066a7";
 
 // XP Constants
 const XP_LEVELS = [
@@ -22,7 +26,7 @@ const cloneCardWithHP = (card) => ({
   currentHP: card.hp,
 });
 
-const GameBoard = () => {
+const GameBoard = ({ wallet }) => {
   // State for player's bench (4 cards max)
   const [bench, setBench] = useState([]);
   // State for player's deck (remaining cards to draw)
@@ -61,6 +65,9 @@ const GameBoard = () => {
   const [xpToNextLevel, setXpToNextLevel] = useState(0);
   const [showLevelUpAlert, setShowLevelUpAlert] = useState(false);
   const [levelUpReward, setLevelUpReward] = useState("");
+  
+  // Training status
+  const [training, setTraining] = useState(false);
 
   // Initialize the game - shuffle deck and set up bench
   useEffect(() => {
@@ -111,6 +118,63 @@ const GameBoard = () => {
     return newXp;
   };
 
+  // Function to train creature on blockchain (from BattleArena.js)
+  const trainCreature = async (xpAmount) => {
+    if (!wallet || !wallet.connected || !wallet.account) {
+      setLog((prev) => [...prev, "Wallet not connected. Blockchain XP gain skipped."]);
+      return;
+    }
+    
+    // Get the first creature from wallet (simplification - in a real app you'd want to select)
+    try {
+      setTraining(true);
+      
+      // Create a transaction block
+      const txb = new TransactionBlock();
+      
+      // Get the creature objects from wallet
+      const nfts = await wallet.client.getOwnedObjects({
+        owner: wallet.account.address,
+        options: {
+          showContent: true,
+          showType: true,
+        },
+      });
+      
+      // Find a valid creature to train
+      const creature = nfts.data.find((obj) => {
+        const type = obj.data?.type;
+        return type && (type.includes("starter_nft") || type.includes("suimon") || type.includes("creature"));
+      });
+      
+      if (!creature) {
+        setLog((prev) => [...prev, "No trainable creatures found in wallet."]);
+        return;
+      }
+      
+      // Call the gain_experience function on the smart contract
+      txb.moveCall({
+        target: `${CONTRACT_ADDRESS}::starter_nft::gain_experience`,
+        arguments: [
+          txb.object(creature.data.objectId), // NFT object ID
+          txb.pure(xpAmount), // Experience amount to gain
+        ],
+      });
+      
+      // Execute the transaction
+      const { response } = await wallet.signAndExecuteTransactionBlock({
+        transactionBlock: txb,
+      });
+      
+      setLog((prev) => [...prev, `🎮 Blockchain training successful! Your creature gained ${xpAmount} XP on-chain.`]);
+    } catch (err) {
+      console.error("Training transaction failed:", err);
+      setLog((prev) => [...prev, `⚠️ Blockchain training failed: ${err.message}`]);
+    } finally {
+      setTraining(false);
+    }
+  };
+
   const initializeGame = () => {
     // Shuffle the player cards
     const shuffledCards = [...playerCards].sort(() => 0.5 - Math.random());
@@ -126,7 +190,7 @@ const GameBoard = () => {
     setLog(["Game started! Select a card from your bench to play."]);
   };
 
-  const updateWins = () => {
+  const updateWins = async () => {
     const newWins = wins + 1;
     setWins(newWins);
     localStorage.setItem("wins", newWins);
@@ -151,6 +215,14 @@ const GameBoard = () => {
       setMatchWinner("player");
       setShowMatchAlert(true);
       setLog((prev) => [...prev, "Congratulations! You won the match!"]);
+      
+      try {
+        // 👇 Trigger on-chain XP gain transaction
+        await trainCreature(matchXp);
+      } catch (err) {
+        console.error("Failed to train creature after match win:", err);
+        setLog((prev) => [...prev, `⚠️ Blockchain XP transaction failed: ${err.message}`]);
+      }
     }
   };
 
