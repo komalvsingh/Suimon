@@ -240,7 +240,7 @@ const GameBoard = ({ wallet }) => {
     // Check if player has won the match
     if (newPlayerMatchWins >= 4) {
       // Award bonus XP for winning the match
-      const matchXp = 15;
+      const matchXp =  Math.floor(Math.random() * 6) + 2;
       const updatedXp = updateXP(matchXp);
       setLog((prev) => [...prev, `You earned ${matchXp} bonus XP for winning the match! (Total: ${updatedXp} XP)`]);
       
