@@ -125,7 +125,7 @@ function App() {
           {activeTab === "leaderboard" && <Leaderboard wallet={wallet} />}
           {activeTab === "starter-picker" && <StarterPickerPage />}
           {activeTab === "home" && <Home />}
-          {activeTab === "tcg" && <GameBoard />}
+          {activeTab === "tcg" && <GameBoard wallet={wallet} />}
 
           {activeTab === "pokidesk" && (
             <Routes>
