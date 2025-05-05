@@ -667,7 +667,7 @@ const WalletDashboard = ({ wallet }) => {
             </form>
           </div>
           
-          {/* Transaction History */}
+          {/* Transaction History
           <div className="bg-surface p-6 rounded-lg shadow-lg">
             <h2 className="text-xl font-bold mb-4">Transaction History</h2>
             {transactions.length === 0 ? (
@@ -693,7 +693,7 @@ const WalletDashboard = ({ wallet }) => {
                 ))}
               </div>
             )}
-          </div>
+          </div> */}
         </>
       )}
     </div>
