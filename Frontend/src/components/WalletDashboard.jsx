@@ -4,10 +4,10 @@ import { SUI_TYPE_ARG } from '@mysten/sui/utils';
 import ConnectButtonWrapper from './ConnectButtonWrapper.jsx';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 
-// Registry module constants
-const REGISTRY_PACKAGE_ID = '0x0cdeac32e3e56c3e4592c5715bf6fa886bf6fcea2f734de3270b2e2ed507097a'; 
+// Updated Registry module constants with your provided values
+const REGISTRY_PACKAGE_ID = '0x2e493caf3bd0b6eb3fbf2c8ef298a4cb71cd50af5c7b5b31c387a2d66d24091d'; 
 const REGISTRY_MODULE = 'username_registry';
-const REGISTRY_OBJECT_ID = '0x609fd38b9e2f5881ad7e78635f74640a62a69c25bccd6ac86ce0c709d0b860db';
+const REGISTRY_OBJECT_ID = '0x75290496fb003d4f36494240877688a595a7635820768d044ab4638742b1e1d8';
 
 const WalletDashboard = ({ wallet }) => {
   const [balance, setBalance] = useState(0);
@@ -28,6 +28,7 @@ const WalletDashboard = ({ wallet }) => {
   const [registrationStatus, setRegistrationStatus] = useState('');
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(null);
+  const [transactionInProgress, setTransactionInProgress] = useState(false);
   
   // Fetch wallet balance, transactions, and username handle
   const fetchWalletData = async () => {
@@ -105,14 +106,13 @@ const WalletDashboard = ({ wallet }) => {
     try {
       const txb = new TransactionBlock();
       
-      // FIXED: Added explicit type specification
+      // Call the module directly
       txb.moveCall({
         target: `${REGISTRY_PACKAGE_ID}::${REGISTRY_MODULE}::is_username_available`,
         arguments: [
           txb.object(REGISTRY_OBJECT_ID),
           txb.pure.string(usernameToCheck)
         ],
-        typeArguments: [], // Explicitly set empty type arguments
       });
       
       const result = await suiClient.devInspectTransactionBlock({
@@ -138,22 +138,23 @@ const WalletDashboard = ({ wallet }) => {
     if (!wallet.connected || !wallet.account || !username) return;
     
     setIsRegistering(true);
+    setTransactionInProgress(true);
     setRegistrationStatus('');
     setError('');
     
     try {
       const txb = new TransactionBlock();
       
-      // FIXED: Add gas budget and explicit typing
-      txb.setGasBudget(30000000); // Setting explicit gas budget
+      // Setting a more appropriate gas budget
+      txb.setGasBudget(50000000);
       
+      // Call the module directly
       txb.moveCall({
         target: `${REGISTRY_PACKAGE_ID}::${REGISTRY_MODULE}::register_username`,
         arguments: [
           txb.object(REGISTRY_OBJECT_ID),
           txb.pure.string(username)
         ],
-        typeArguments: [], // Explicitly set empty type arguments
       });
       
       // Execute transaction
@@ -168,12 +169,24 @@ const WalletDashboard = ({ wallet }) => {
       
       console.log('Username registration response:', response);
       
+      // Check for transaction success
+      // The effects structure has changed in the newer versions of the Sui SDK
+      // Now we need to check response.effects.status directly
+      if (response.effects && response.effects.status && response.effects.status !== 'success') {
+        throw new Error(`Transaction failed with status: ${response.effects.status}`);
+      }
+      
+      // The transaction was executed successfully if we didn't throw an error
       // Find the created UsernameHandle object from the transaction effects
       let handleObjectId = null;
-      if (response.effects?.created) {
-        for (const created of response.effects.created) {
-          if (created.owner?.AddressOwner === wallet.account.address) {
-            handleObjectId = created.reference.objectId;
+      
+      // Look through created objects
+      if (response.objectChanges) {
+        for (const change of response.objectChanges) {
+          if (change.type === 'created' && 
+              change.objectType.includes(`${REGISTRY_MODULE}::UsernameHandle`) &&
+              change.owner?.AddressOwner === wallet.account.address) {
+            handleObjectId = change.objectId;
             break;
           }
         }
@@ -190,33 +203,37 @@ const WalletDashboard = ({ wallet }) => {
       setUsernameAvailable(null);
       
       // Refresh wallet data to update UI
-      setTimeout(fetchWalletData, 1000);
+      setTimeout(fetchWalletData, 2000);
     } catch (err) {
       console.error('Error registering username:', err);
       setRegistrationStatus('error');
       setError('Failed to register username: ' + (err.message || 'Unknown error'));
     } finally {
       setIsRegistering(false);
+      setTransactionInProgress(false);
     }
   };
-  
+
   // Unregister username
   const unregisterUsername = async () => {
     if (!wallet.connected || !wallet.account || !userHandle) return;
     
+    setTransactionInProgress(true);
+    setError('');
+    
     try {
       const txb = new TransactionBlock();
       
-      // FIXED: Add gas budget and explicit typing
-      txb.setGasBudget(20000000); // Setting explicit gas budget
+      // Increase gas budget
+      txb.setGasBudget(50000000);
       
+      // Call the module directly
       txb.moveCall({
         target: `${REGISTRY_PACKAGE_ID}::${REGISTRY_MODULE}::unregister_username`,
         arguments: [
           txb.object(REGISTRY_OBJECT_ID),
           txb.object(userHandle.objectId),
         ],
-        typeArguments: [], // Explicitly set empty type arguments
       });
       
       // Execute transaction
@@ -229,14 +246,21 @@ const WalletDashboard = ({ wallet }) => {
       
       console.log('Username unregistration response:', response);
       
+      // Check for transaction success - Use a more resilient check
+      if (response.effects && response.effects.status !== 'success') {
+        throw new Error(`Transaction failed with status: ${response.effects.status || 'unknown'}`);
+      }
+      
       // Reset handle state
       setUserHandle(null);
       
       // Refresh wallet data
-      setTimeout(fetchWalletData, 1000);
+      setTimeout(fetchWalletData, 2000);
     } catch (err) {
       console.error('Error unregistering username:', err);
       setError('Failed to unregister username: ' + (err.message || 'Unknown error'));
+    } finally {
+      setTransactionInProgress(false);
     }
   };
   
@@ -249,13 +273,13 @@ const WalletDashboard = ({ wallet }) => {
     try {
       const txb = new TransactionBlock();
       
+      // Call the module directly
       txb.moveCall({
         target: `${REGISTRY_PACKAGE_ID}::${REGISTRY_MODULE}::lookup_address`,
         arguments: [
           txb.object(REGISTRY_OBJECT_ID),
           txb.pure.string(usernameWithoutAt)
         ],
-        typeArguments: [], // Explicitly set empty type arguments
       });
       
       const result = await suiClient.devInspectTransactionBlock({
@@ -290,6 +314,7 @@ const WalletDashboard = ({ wallet }) => {
     }
     
     setIsSending(true);
+    setTransactionInProgress(true);
     setError('');
     
     try {
@@ -311,8 +336,8 @@ const WalletDashboard = ({ wallet }) => {
       
       const txb = new TransactionBlock();
       
-      // FIXED: Add gas budget
-      txb.setGasBudget(20000000); // Setting explicit gas budget
+      // Increase gas budget
+      txb.setGasBudget(50000000);
       
       // Split/merge coins as needed and create a coin with the specific amount
       const [coin] = txb.splitCoins(txb.gas, [txb.pure(amountMist)]);
@@ -328,6 +353,11 @@ const WalletDashboard = ({ wallet }) => {
       });
       
       console.log('Transaction response:', response);
+      
+      // Check for transaction success - More resilient check
+      if (response.effects && response.effects.status !== 'success') {
+        throw new Error(`Transaction failed with status: ${response.effects.status || 'unknown'}`);
+      }
       
       // Add the transaction to the list
       const newTransaction = {
@@ -354,6 +384,111 @@ const WalletDashboard = ({ wallet }) => {
       setError('Failed to send transaction: ' + (err.message || 'Unknown error'));
     } finally {
       setIsSending(false);
+      setTransactionInProgress(false);
+    }
+  };
+  
+  // Added support for username transfers via transfer module - FIXED
+  const sendViaUsernameTransfer = async (e) => {
+    e.preventDefault();
+    if (!wallet.connected || !wallet.account || !sendAmount || !recipientInput || !recipientInput.startsWith('@')) return;
+    
+    const amount = parseFloat(sendAmount);
+    if (isNaN(amount) || amount <= 0 || amount > balance) {
+      setError('Invalid amount');
+      return;
+    }
+    
+    setIsSending(true);
+    setTransactionInProgress(true);
+    setError('');
+    
+    try {
+      // Get username without @ symbol
+      const username = recipientInput.substring(1);
+      
+      // Convert SUI to MIST (1 SUI = 10^9 MIST)
+      const amountMist = Math.floor(amount * 1_000_000_000);
+      
+      const txb = new TransactionBlock();
+      
+      // Increase gas budget
+      txb.setGasBudget(50000000);
+      
+      // Get a coin with the specific amount
+      const [coin] = txb.splitCoins(txb.gas, [txb.pure(amountMist)]);
+      
+      // Call the username_transfer module
+      txb.moveCall({
+        target: `${REGISTRY_PACKAGE_ID}::username_transfer::transfer_coin_by_username_take_all`,
+        arguments: [
+          txb.object(REGISTRY_OBJECT_ID),
+          coin,
+          txb.pure.string(username)
+        ],
+        typeArguments: [SUI_TYPE_ARG], // SUI coin type
+      });
+      
+      const response = await wallet.signAndExecuteTransactionBlock({
+        transactionBlock: txb,
+        options: {
+          showEffects: true,
+          showEvents: true,
+        },
+      });
+      
+      console.log('Username transfer response:', response);
+      
+      // FIX: More resilient check for transaction status
+      // The error is occurring because we're checking for status.status which doesn't exist
+      // First check if effects exist, then check if status exists, then check if it's not success
+      if (response.effects) {
+        if (typeof response.effects.status === 'object' && response.effects.status?.status) {
+          if (response.effects.status.status !== 'success') {
+            throw new Error(`Transaction failed with status: ${response.effects.status.status}`);
+          }
+        } else if (typeof response.effects.status === 'string' && response.effects.status !== 'success') {
+          throw new Error(`Transaction failed with status: ${response.effects.status}`);
+        }
+      }
+      
+      // Find recipient address from events if available
+      let recipientAddress = null;
+      if (response.events) {
+        for (const event of response.events) {
+          if (event.type.includes('CoinTransferByUsername')) {
+            recipientAddress = event.parsedJson?.to_address;
+            break;
+          }
+        }
+      }
+      
+      // Add the transaction to the list
+      const newTransaction = {
+        id: transactions.length + 1,
+        type: 'send',
+        amount,
+        to: recipientInput,
+        toAddress: recipientAddress || 'unknown',
+        timestamp: new Date().toLocaleString(),
+        txId: response.digest,
+        resolvedUsername: recipientInput,
+      };
+      
+      setTransactions([newTransaction, ...transactions]);
+      // Update balance (optimistically)
+      setBalance(prevBalance => prevBalance - amount);
+      setSendAmount('');
+      setRecipientInput('');
+      
+      // Refresh wallet data after a short delay to get updated balance
+      setTimeout(fetchWalletData, 3000);
+    } catch (err) {
+      console.error('Error sending transaction via username:', err);
+      setError('Failed to send transaction: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsSending(false);
+      setTransactionInProgress(false);
     }
   };
   
@@ -398,7 +533,8 @@ const WalletDashboard = ({ wallet }) => {
                 <span className="text-green-400 font-bold">@{userHandle.username}</span>
                 <button
                   onClick={unregisterUsername}
-                  className="ml-2 text-xs text-red-400 hover:text-red-300"
+                  disabled={transactionInProgress}
+                  className="ml-2 text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
                   title="Unregister username"
                 >
                   ×
@@ -440,6 +576,7 @@ const WalletDashboard = ({ wallet }) => {
                       className="flex-1 p-2 rounded-r-md bg-background border border-gray-700 focus:border-primary focus:outline-none"
                       required
                       minLength={3}
+                      disabled={transactionInProgress}
                     />
                   </div>
                   
@@ -468,7 +605,7 @@ const WalletDashboard = ({ wallet }) => {
                 
                 <button
                   type="submit"
-                  disabled={isRegistering || !wallet.connected || !username || username.length < 3 || usernameAvailable === false}
+                  disabled={isRegistering || transactionInProgress || !wallet.connected || !username || username.length < 3 || usernameAvailable === false}
                   className="w-full bg-primary hover:bg-primary/80 text-white py-2 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isRegistering ? 'Registering...' : 'Register Username'}
@@ -480,7 +617,7 @@ const WalletDashboard = ({ wallet }) => {
           {/* Send Transaction Form */}
           <div className="bg-surface p-6 rounded-lg shadow-lg">
             <h2 className="text-xl font-bold mb-4">Send SUI</h2>
-            <form onSubmit={handleSend} className="space-y-4">
+            <form onSubmit={recipientInput.startsWith('@') ? sendViaUsernameTransfer : handleSend} className="space-y-4">
               <div>
                 <label htmlFor="recipient" className="block mb-1">Recipient (Address or @username)</label>
                 <input
@@ -491,9 +628,12 @@ const WalletDashboard = ({ wallet }) => {
                   placeholder="0x... or @username"
                   className="w-full p-2 rounded-md bg-background border border-gray-700 focus:border-primary focus:outline-none"
                   required
+                  disabled={transactionInProgress}
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  You can use @username format for registered users
+                  {recipientInput.startsWith('@') ? 
+                    'Will use username_transfer module for direct username transfers' : 
+                    'Use @username format for registered users'}
                 </p>
               </div>
               <div>
@@ -509,6 +649,7 @@ const WalletDashboard = ({ wallet }) => {
                   placeholder="0.0"
                   className="w-full p-2 rounded-md bg-background border border-gray-700 focus:border-primary focus:outline-none"
                   required
+                  disabled={transactionInProgress}
                 />
               </div>
               {error && (
@@ -518,10 +659,10 @@ const WalletDashboard = ({ wallet }) => {
               )}
               <button
                 type="submit"
-                disabled={isSending || !wallet.connected}
+                disabled={isSending || transactionInProgress || !wallet.connected}
                 className="w-full bg-primary hover:bg-primary/80 text-white py-2 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSending ? 'Sending...' : 'Send SUI'}
+                {isSending ? 'Sending...' : recipientInput.startsWith('@') ? 'Send SUI via Username' : 'Send SUI'}
               </button>
             </form>
           </div>
