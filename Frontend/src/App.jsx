@@ -89,7 +89,7 @@ function App() {
               <div className={`${bgColors.accent1} w-3 h-8 rounded-full ${glowingEffect}`}></div>
               <h1 className={`text-4xl font-bold ${colors.primary} ml-4 tracking-widest transition-all duration-300 hover:scale-105 hover:text-fuchsia-400`}>
                 SuiMon
-                <span className={`${colors.secondary} text-sm ml-2 animate-pulse`}>NEON</span>
+    
               </h1>
             </div>
             <div className="flex space-x-4 items-center">
@@ -181,7 +181,7 @@ function App() {
         {/* Footer with neon accent */}
         <footer className="bg-gray-800/80 backdrop-blur-sm border-t border-gray-700 p-4 mt-8">
           <div className="container mx-auto flex justify-between items-center">
-            <div className={`${colors.primary} text-sm`}>SuiMon NEON © 2025</div>
+            <div className={`${colors.primary} text-sm`}>SuiMon © 2025</div>
             <div className="flex space-x-3">
               {[bgColors.primary, bgColors.secondary, bgColors.accent1, bgColors.accent2].map((color, index) => (
                 <div key={index} className={`w-2 h-2 rounded-full ${color} animate-pulse`} style={{ animationDelay: `${index * 0.2}s` }}></div>
