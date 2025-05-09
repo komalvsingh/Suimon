@@ -472,7 +472,7 @@ const GameBoard = ({ wallet }) => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 text-gray-500 font-bold">
       <h1 className="text-3xl font-bold text-center mb-4">Pokémon TCG</h1>
 
       {/* XP Bar and Level Display */}
