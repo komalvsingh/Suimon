@@ -1,0 +1,13 @@
+[package]
+name = "suimon"
+version = "0.0.1"
+edition = "2024"  # Set edition to '2024'
+
+[toolchain]
+version = "1.47.0"
+
+[addresses]
+suimon = "0x0"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet" }

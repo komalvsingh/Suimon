@@ -1,0 +1,18 @@
+{
+  "name": "Ivysaur",
+  "description": "When the bulb on its back grows large, it appears to lose the ability to stand on its hind legs.",
+  "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/2.svg",
+  "weight": 13.0,
+  "height": 1.0,
+  "types": ["grass", "poison"],
+  "abilities": ["overgrow", "chlorophyll"],
+  "stats": {
+    "hp": 60,
+    "attack": 62,
+    "defense": 63,
+    "special-attack": 80,
+    "special-defense": 80,
+    "speed": 60
+  },
+  "external_url": "https://pokeapi.co/api/v2/pokemon/2"
+}
