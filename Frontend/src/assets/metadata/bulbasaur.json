@@ -1,0 +1,18 @@
+{
+  "name": "Bulbasaur",
+  "description": "A strange seed was planted on its back at birth. The plant sprouts and grows with this Pokémon.",
+  "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/1.svg",
+  "weight": 6.9,
+  "height": 0.7,
+  "types": ["grass", "poison"],
+  "abilities": ["overgrow", "chlorophyll"],
+  "stats": {
+    "hp": 45,
+    "attack": 49,
+    "defense": 49,
+    "special-attack": 65,
+    "special-defense": 65,
+    "speed": 45
+  },
+  "external_url": "/detail/1"
+}

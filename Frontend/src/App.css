@@ -47,7 +47,7 @@
 
 
 :root {
-  --identity-primary: #dc0a2d;
+  --identity-primary: rgba(51, 51, 51, 0.607);
 
   --grayscale-dark: #212121;
   --grayscale-medium: #666666;
@@ -137,14 +137,16 @@ body {
 
 .main {
   margin: 0;
-  padding: 0;
+  padding: 20px;
+  color: black;
   background-color: var(--identity-primary);
   height: 100vh;
-  width: 100vw;
+  width: 85vw;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  border-radius: 10px;
 }
 
 .header.home {

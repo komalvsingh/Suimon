@@ -1,0 +1,18 @@
+{
+  "name": "Wartortle",
+  "description": "It is recognized as a symbol of longevity. If its shell has algae on it, that Wartortle is very old.",
+  "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/8.svg",
+  "weight": 22.5,
+  "height": 1.0,
+  "types": ["water"],
+  "abilities": ["torrent", "rain-dish"],
+  "stats": {
+    "hp": 59,
+    "attack": 63,
+    "defense": 80,
+    "special-attack": 65,
+    "special-defense": 80,
+    "speed": 58
+  },
+  "external_url": "https://pokeapi.co/api/v2/pokemon/8"
+}

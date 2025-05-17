@@ -1,0 +1,18 @@
+{
+  "name": "Charmander",
+  "description": "Obviously prefers hot places. If it gets caught in the rain, steam is said to spout from the tip of its tail.",
+  "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/4.svg",
+  "weight": 8.5,
+  "height": 0.6,
+  "types": ["fire"],
+  "abilities": ["blaze", "solar-power"],
+  "stats": {
+    "hp": 39,
+    "attack": 52,
+    "defense": 43,
+    "special-attack": 60,
+    "special-defense": 50,
+    "speed": 65
+  },
+  "external_url": "/detail/4"
+}
