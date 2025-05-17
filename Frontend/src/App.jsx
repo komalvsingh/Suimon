@@ -11,6 +11,8 @@ import HomePage from "./components/HomePage";
 import DetailPage from "./components/DetailPage";
 import StarterPickerPage from "./pages/StarterPickerPage";
 import GameBoard from "./pages/GameBoard";
+import PokemonGymBattle from "./game/PokemonGymBrawler.jsx";
+import { Web3Provider } from "./game/web3Context.jsx";
 
 function App() {
   const [activeTab, setActiveTab] = useState("wallet");
@@ -58,6 +60,7 @@ function App() {
         case "pokidesk": return "border-b-2 border-pink-500 shadow-pink-500/50";
         case "starter-picker": return "border-b-2 border-emerald-400 shadow-emerald-400/50";
         case "tcg": return "border-b-2 border-yellow-400 shadow-yellow-400/50";
+        case "gym-brawler": return "border-b-2 border-orange-400 shadow-orange-400/50";
         default: return "border-b-2 border-fuchsia-500";
       }
     }
@@ -73,12 +76,14 @@ function App() {
       case "pokidesk": return colors.accent3;
       case "starter-picker": return colors.accent4;
       case "tcg": return "text-yellow-400";
+      case "gym-brawler": return "text-orange-400";
       default: return colors.primary;
     }
   };
 
   return (
     <Router>
+      <Web3Provider>
       <div className="min-h-screen bg-gray-900 text-gray-100 transition-all duration-300 ease-in-out">
         {/* Header with neon glow */}
         <header className="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 p-6 shadow-lg">
@@ -116,6 +121,7 @@ function App() {
               { id: "pokidesk", name: "My PokiDesk" },
               { id: "starter-picker", name: "Mint Starter" },
               { id: "tcg", name: "Pokemon Game-tcg" },
+              { id: "gym-brawler", name: "Gym Brawler" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -166,6 +172,11 @@ function App() {
                 <GameBoard wallet={wallet} />
               </div>
             )}
+            {activeTab === "gym-brawler" && (
+              <div className="animate-fadeIn">
+                <PokemonGymBattle />
+              </div>
+            )}
             {activeTab === "pokidesk" && (
               <div className="animate-fadeIn">
                 <Routes>
@@ -190,6 +201,7 @@ function App() {
           </div>
         </footer>
       </div>
+      </Web3Provider>
     </Router>
   );
 }
