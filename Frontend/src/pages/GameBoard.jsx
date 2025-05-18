@@ -1,17 +1,23 @@
-import React, { useState, useEffect } from "react";
-import Card from "../components/Card";
-import playerCards from "../data/playerCards"; // Import player cards
-import aiCards from "../data/aiCards"; // Import AI cards
-import { TransactionBlock } from "@mysten/sui.js/transactions"; // Import the TransactionBlock for Sui transactions
-import { SuiClient } from "@mysten/sui.js/client"; // Import SuiClient for fetching NFTs
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import Card from "../components/Card"
+import playerCards from "../data/playerCards" // Import player cards
+import aiCards from "../data/aiCards" // Import AI cards
+import { TransactionBlock } from "@mysten/sui.js/transactions" // Import the TransactionBlock for Sui transactions
+import { SuiClient } from "@mysten/sui.js/client" // Import SuiClient for fetching NFTs
+import { useAuth } from "../components/auth/AuthContext" // Import auth context
 
 // Contract address from the BattleArena.js file
-const CONTRACT_ADDRESS = "0x70217963607936caee034ce016fb2e9be0debc644d13a6ac40d955940e1066a7";
+const CONTRACT_ADDRESS = "0x70217963607936caee034ce016fb2e9be0debc644d13a6ac40d955940e1066a7"
 
 // Create a SuiClient instance for testnet
 const TESTNET_CLIENT = new SuiClient({
   url: "https://fullnode.testnet.sui.io",
-});
+})
+
+// API URL - change this to match your backend URL
+const API_URL = "http://localhost:5000/api"
 
 // XP Constants
 const XP_LEVELS = [
@@ -24,163 +30,283 @@ const XP_LEVELS = [
   { level: 7, xpRequired: 750, reward: "Premium Card Pack" },
   { level: 8, xpRequired: 1000, reward: "2 Ultra Rare Cards" },
   { level: 9, xpRequired: 1500, reward: "Master Card Pack" },
-  { level: 10, xpRequired: 2500, reward: "Legendary Card" }
-];
+  { level: 10, xpRequired: 2500, reward: "Legendary Card" },
+]
 
 const cloneCardWithHP = (card) => ({
   ...card,
   currentHP: card.hp,
-});
+})
 
 const GameBoard = ({ wallet }) => {
-  // State for player's bench (4 cards max)
-  const [bench, setBench] = useState([]);
-  // State for player's deck (remaining cards to draw)
-  const [deck, setDeck] = useState([]);
-  // State for player's active card in battle
-  const [activeCard, setActiveCard] = useState(null);
-  // State for AI's active card
-  const [aiCard, setAiCard] = useState(null);
-  // State for cards that have been played and can't be used again
-  const [usedCards, setUsedCards] = useState([]);
-  // State for knocked out cards (to display in UI)
-  const [knockedOutCards, setKnockedOutCards] = useState([]);
-  const [aiKnockedOutCards, setAiKnockedOutCards] = useState([]);
-  // Game state
-  const [turn, setTurn] = useState("player");
-  const [log, setLog] = useState([]);
-  const [gameOver, setGameOver] = useState(false);
+  // Auth context for user data
+  const { user, isAuthenticated } = useAuth()
 
-  // Stats tracking
-  const [wins, setWins] = useState(
-    () => parseInt(localStorage.getItem("wins")) || 0
-  );
-  const [losses, setLosses] = useState(
-    () => parseInt(localStorage.getItem("losses")) || 0
-  );
-  
+  // State for player's bench (4 cards max)
+  const [bench, setBench] = useState([])
+  // State for player's deck (remaining cards to draw)
+  const [deck, setDeck] = useState([])
+  // State for player's active card in battle
+  const [activeCard, setActiveCard] = useState(null)
+  // State for AI's active card
+  const [aiCard, setAiCard] = useState(null)
+  // State for cards that have been played and can't be used again
+  const [usedCards, setUsedCards] = useState([])
+  // State for knocked out cards (to display in UI)
+  const [knockedOutCards, setKnockedOutCards] = useState([])
+  const [aiKnockedOutCards, setAiKnockedOutCards] = useState([])
+  // Game state
+  const [turn, setTurn] = useState("player")
+  const [log, setLog] = useState([])
+  const [gameOver, setGameOver] = useState(false)
+
+  // Stats tracking - use local state for UI
+  const [wins, setWins] = useState(0)
+  const [losses, setLosses] = useState(0)
+
   // Match tracking (wins within current match)
-  const [playerMatchWins, setPlayerMatchWins] = useState(0);
-  const [aiMatchWins, setAiMatchWins] = useState(0);
-  const [matchWinner, setMatchWinner] = useState(null);
-  const [showMatchAlert, setShowMatchAlert] = useState(false);
-  
-  // XP System
-  const [xp, setXp] = useState(() => parseInt(localStorage.getItem("playerXP")) || 0);
-  const [level, setLevel] = useState(1);
-  const [xpToNextLevel, setXpToNextLevel] = useState(0);
-  const [showLevelUpAlert, setShowLevelUpAlert] = useState(false);
-  const [levelUpReward, setLevelUpReward] = useState("");
-  
+  const [playerMatchWins, setPlayerMatchWins] = useState(0)
+  const [aiMatchWins, setAiMatchWins] = useState(0)
+  const [matchWinner, setMatchWinner] = useState(null)
+  const [showMatchAlert, setShowMatchAlert] = useState(false)
+
+  // XP System - use local state for UI
+  const [xp, setXp] = useState(0)
+  const [level, setLevel] = useState(1)
+  const [xpToNextLevel, setXpToNextLevel] = useState(0)
+  const [showLevelUpAlert, setShowLevelUpAlert] = useState(false)
+  const [levelUpReward, setLevelUpReward] = useState("")
+
   // Training status
-  const [training, setTraining] = useState(false);
+  const [training, setTraining] = useState(false)
+
+  // Pending updates to send to server
+  const pendingUpdatesRef = useRef({
+    xpGained: 0,
+    wins: 0,
+    losses: 0,
+    matchWins: 0,
+    matchLosses: 0,
+    lastUpdated: Date.now(),
+  })
+
+  // Server update interval (3 minutes = 180000ms)
+  const SERVER_UPDATE_INTERVAL = 180000
+
+  // Load user stats from server when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Set initial stats from user data
+      setXp(user.xp || 0)
+      setWins(user.wins || 0)
+      setLosses(user.losses || 0)
+
+      // Calculate level based on XP
+      calculateLevel(user.xp || 0)
+
+      // Fetch latest stats from server
+      fetchUserStats()
+    }
+  }, [isAuthenticated, user])
 
   // Initialize the game - shuffle deck and set up bench
   useEffect(() => {
-    initializeGame();
-    
+    initializeGame()
+
     // Initialize level information based on current XP
-    calculateLevel(xp);
-  }, []);
-  
-  // Log when wallet changes to help debug
+    calculateLevel(xp)
+  }, [])
+
+  // Set up server update interval
   useEffect(() => {
-    console.log("GameBoard: Wallet prop changed:", { 
-      connected: wallet?.connected, 
-      hasAccount: !!wallet?.account,
-      address: wallet?.account?.address
-    });
-  }, [wallet]);
+    // Function to send pending updates to server
+    const sendPendingUpdates = async () => {
+      if (!isAuthenticated || !user?.token) return
 
-  // Calculate player level based on XP
-  const calculateLevel = (currentXp) => {
-    let playerLevel = 1;
-    let nextLevelXp = 0;
-    let reward = "";
+      const updates = pendingUpdatesRef.current
 
-    for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
-      if (currentXp >= XP_LEVELS[i].xpRequired) {
-        playerLevel = XP_LEVELS[i].level;
-        nextLevelXp = i < XP_LEVELS.length - 1 ? XP_LEVELS[i + 1].xpRequired : null;
-        reward = XP_LEVELS[i].reward;
-        break;
+      // Only send if there are updates to send
+      if (
+        updates.xpGained > 0 ||
+        updates.wins > 0 ||
+        updates.losses > 0 ||
+        updates.matchWins > 0 ||
+        updates.matchLosses > 0
+      ) {
+        try {
+          await fetch(`${API_URL}/game/update-stats`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${user.token}`,
+            },
+            body: JSON.stringify({
+              xpGained: updates.xpGained,
+              wins: updates.wins > 0 ? true : null,
+              losses: updates.losses > 0 ? true : null,
+              matchWin: updates.matchWins > 0 ? true : updates.matchLosses > 0 ? false : null,
+            }),
+          })
+
+          // Reset pending updates after successful send
+          pendingUpdatesRef.current = {
+            xpGained: 0,
+            wins: 0,
+            losses: 0,
+            matchWins: 0,
+            matchLosses: 0,
+            lastUpdated: Date.now(),
+          }
+
+          console.log("Stats updated on server")
+        } catch (error) {
+          console.error("Failed to update stats on server:", error)
+        }
       }
     }
 
-    setLevel(playerLevel);
-    setXpToNextLevel(nextLevelXp !== null ? nextLevelXp - currentXp : "MAX");
-    return { playerLevel, nextLevelXp, reward };
-  };
+    // Set interval to send updates every 3 minutes
+    const intervalId = setInterval(sendPendingUpdates, SERVER_UPDATE_INTERVAL)
 
-  // Update XP and check for level ups
-  const updateXP = (amount) => {
-    const oldXp = xp;
-    const newXp = oldXp + amount;
-    
-    setXp(newXp);
-    localStorage.setItem("playerXP", newXp);
-    
-    // Check if player leveled up
-    const oldLevel = calculateLevel(oldXp).playerLevel;
-    const newLevelInfo = calculateLevel(newXp);
-    
-    if (newLevelInfo.playerLevel > oldLevel) {
-      setLevelUpReward(newLevelInfo.reward);
-      setShowLevelUpAlert(true);
-      setLog((prev) => [...prev, `🎉 LEVEL UP! You are now level ${newLevelInfo.playerLevel}!`]);
+    // Also send updates when component unmounts
+    return () => {
+      clearInterval(intervalId)
+      sendPendingUpdates()
     }
-    
-    return newXp;
-  };
+  }, [isAuthenticated, user])
+
+  // Fetch user stats from server
+  const fetchUserStats = async () => {
+    if (!isAuthenticated || !user?.token) return
+
+    try {
+      const response = await fetch(`${API_URL}/auth/profile`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+      })
+
+      if (response.ok) {
+        const userData = await response.json()
+        setXp(userData.xp || 0)
+        setWins(userData.wins || 0)
+        setLosses(userData.losses || 0)
+        calculateLevel(userData.xp || 0)
+      }
+    } catch (error) {
+      console.error("Failed to fetch user stats:", error)
+    }
+  }
+
+  // Calculate player level based on XP
+  const calculateLevel = (currentXp) => {
+    let playerLevel = 1
+    let nextLevelXp = 0
+    let reward = ""
+
+    for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+      if (currentXp >= XP_LEVELS[i].xpRequired) {
+        playerLevel = XP_LEVELS[i].level
+        nextLevelXp = i < XP_LEVELS.length - 1 ? XP_LEVELS[i + 1].xpRequired : null
+        reward = XP_LEVELS[i].reward
+        break
+      }
+    }
+
+    setLevel(playerLevel)
+    setXpToNextLevel(nextLevelXp !== null ? nextLevelXp - currentXp : "MAX")
+    return { playerLevel, nextLevelXp, reward }
+  }
+
+  // Update XP and check for level ups - only updates local state
+  const updateXP = (amount, isWin = null, isMatchWin = null) => {
+    // Update local state immediately for UI
+    const oldXp = xp
+    const newXp = oldXp + amount
+    setXp(newXp)
+
+    // Check if player leveled up
+    const oldLevel = calculateLevel(oldXp).playerLevel
+    const newLevelInfo = calculateLevel(newXp)
+
+    if (newLevelInfo.playerLevel > oldLevel) {
+      setLevelUpReward(newLevelInfo.reward)
+      setShowLevelUpAlert(true)
+      setLog((prev) => [...prev, `🎉 LEVEL UP! You are now level ${newLevelInfo.playerLevel}!`])
+    }
+
+    // Queue updates to send to server later
+    const updates = pendingUpdatesRef.current
+    updates.xpGained += amount
+
+    if (isWin === true) {
+      updates.wins += 1
+    } else if (isWin === false) {
+      updates.losses += 1
+    }
+
+    if (isMatchWin === true) {
+      updates.matchWins += 1
+    } else if (isMatchWin === false) {
+      updates.matchLosses += 1
+    }
+
+    pendingUpdatesRef.current = updates
+
+    return newXp
+  }
 
   // Function to train creature on blockchain (from BattleArena.js)
   const trainCreature = async (xpAmount) => {
-    console.log("trainCreature called with xpAmount:", xpAmount);
-    console.log("Wallet status:", { connected: wallet?.connected, hasAccount: !!wallet?.account });
-    
+    console.log("trainCreature called with xpAmount:", xpAmount)
+    console.log("Wallet status:", { connected: wallet?.connected, hasAccount: !!wallet?.account })
+
     if (!wallet || !wallet.connected || !wallet.account) {
-      console.log("Wallet not connected, skipping blockchain XP gain");
-      setLog((prev) => [...prev, "Wallet not connected. Blockchain XP gain skipped."]);
-      return;
+      console.log("Wallet not connected, skipping blockchain XP gain")
+      setLog((prev) => [...prev, "Wallet not connected. Blockchain XP gain skipped."])
+      return
     }
-    
+
     // Get the first creature from wallet (simplification - in a real app you'd want to select)
     try {
-      setTraining(true);
-      setLog((prev) => [...prev, `🔄 Initiating blockchain training (${xpAmount} XP)...`]);
-      
+      setTraining(true)
+      setLog((prev) => [...prev, `🔄 Initiating blockchain training (${xpAmount} XP)...`])
+
       // Create a transaction block
-      const txb = new TransactionBlock();
-      console.log("Transaction block created");
-      
+      const txb = new TransactionBlock()
+      console.log("Transaction block created")
+
       // Get the creature objects from wallet using TESTNET_CLIENT instead of wallet.client
-      console.log("Fetching owned objects from wallet:", wallet.account.address);
+      console.log("Fetching owned objects from wallet:", wallet.account.address)
       const nfts = await TESTNET_CLIENT.getOwnedObjects({
         owner: wallet.account.address,
         options: {
           showContent: true,
           showType: true,
         },
-      });
-      
-      console.log("NFTs found in wallet:", nfts.data.length);
-      
+      })
+
+      console.log("NFTs found in wallet:", nfts.data.length)
+
       // Find a valid creature to train
       const creature = nfts.data.find((obj) => {
-        const type = obj.data?.type;
-        const isTrainable = type && (type.includes("starter_nft") || type.includes("suimon") || type.includes("creature"));
-        console.log("Checking NFT:", { objectId: obj.data?.objectId, type, isTrainable });
-        return isTrainable;
-      });
-      
+        const type = obj.data?.type
+        const isTrainable =
+          type && (type.includes("starter_nft") || type.includes("suimon") || type.includes("creature"))
+        console.log("Checking NFT:", { objectId: obj.data?.objectId, type, isTrainable })
+        return isTrainable
+      })
+
       if (!creature) {
-        console.log("No trainable creatures found in wallet");
-        setLog((prev) => [...prev, "No trainable creatures found in wallet."]);
-        return;
+        console.log("No trainable creatures found in wallet")
+        setLog((prev) => [...prev, "No trainable creatures found in wallet."])
+        return
       }
-      
-      console.log("Found trainable creature:", creature.data.objectId);
-      
+
+      console.log("Found trainable creature:", creature.data.objectId)
+
       // Call the gain_experience function on the smart contract
       txb.moveCall({
         target: `${CONTRACT_ADDRESS}::starter_nft::gain_experience`,
@@ -188,288 +314,295 @@ const GameBoard = ({ wallet }) => {
           txb.object(creature.data.objectId), // NFT object ID
           txb.pure(xpAmount), // Experience amount to gain
         ],
-      });
-      
-      console.log("Move call prepared, executing transaction...");
-      
+      })
+
+      console.log("Move call prepared, executing transaction...")
+
       // Execute the transaction
       const { response } = await wallet.signAndExecuteTransactionBlock({
         transactionBlock: txb,
-      });
-      
-      console.log("Transaction successful:", response);
-      setLog((prev) => [...prev, `🎮 Blockchain training successful! Your creature gained ${xpAmount} XP on-chain.`]);
+      })
+
+      console.log("Transaction successful:", response)
+      setLog((prev) => [...prev, `🎮 Blockchain training successful! Your creature gained ${xpAmount} XP on-chain.`])
     } catch (err) {
-      console.error("Training transaction failed:", err);
-      setLog((prev) => [...prev, `⚠️ Blockchain training failed: ${err.message}`]);
+      console.error("Training transaction failed:", err)
+      setLog((prev) => [...prev, `⚠️ Blockchain training failed: ${err.message}`])
     } finally {
-      setTraining(false);
+      setTraining(false)
     }
-  };
+  }
 
   const initializeGame = () => {
     // Shuffle the player cards
-    const shuffledCards = [...playerCards].sort(() => 0.5 - Math.random());
-    
-    // Set the first 4 cards as the bench
-    const initialBench = shuffledCards.slice(0, 4).map(card => ({...card}));
-    
-    // The rest go to the deck
-    const initialDeck = shuffledCards.slice(4).map(card => ({...card}));
-    
-    setBench(initialBench);
-    setDeck(initialDeck);
-    setLog(["Game started! Select a card from your bench to play."]);
-  };
+    const shuffledCards = [...playerCards].sort(() => 0.5 - Math.random())
 
-  const updateWins = async () => {
-    const newWins = wins + 1;
-    setWins(newWins);
-    localStorage.setItem("wins", newWins);
-    
+    // Set the first 4 cards as the bench
+    const initialBench = shuffledCards.slice(0, 4).map((card) => ({ ...card }))
+
+    // The rest go to the deck
+    const initialDeck = shuffledCards.slice(4).map((card) => ({ ...card }))
+
+    setBench(initialBench)
+    setDeck(initialDeck)
+    setLog(["Game started! Select a card from your bench to play."])
+  }
+
+  const updateWins = () => {
+    const newWins = wins + 1
+    setWins(newWins)
+
     // Award XP for winning (random between 5-10)
-    const winXp = Math.floor(Math.random() * 6) + 5;
-    const newXp = updateXP(winXp);
-    setLog((prev) => [...prev, `You earned ${winXp} XP for winning! (Total: ${newXp} XP)`]);
-    
+    const winXp = Math.floor(Math.random() * 6) + 5
+    const newXp = updateXP(winXp, true, null)
+    setLog((prev) => [...prev, `You earned ${winXp} XP for winning! (Total: ${newXp} XP)`])
+
     // Update match wins
-    const newPlayerMatchWins = playerMatchWins + 1;
-    setPlayerMatchWins(newPlayerMatchWins);
-    setLog((prev) => [...prev, `You won this round! (${newPlayerMatchWins}/4 wins)`]);
-    
+    const newPlayerMatchWins = playerMatchWins + 1
+    setPlayerMatchWins(newPlayerMatchWins)
+    setLog((prev) => [...prev, `You won this round! (${newPlayerMatchWins}/4 wins)`])
+
     // Check if player has won the match
     if (newPlayerMatchWins >= 4) {
       // Award bonus XP for winning the match
-      const matchXp =  Math.floor(Math.random() * 6) + 2;
-      const updatedXp = updateXP(matchXp);
-      setLog((prev) => [...prev, `You earned ${matchXp} bonus XP for winning the match! (Total: ${updatedXp} XP)`]);
-      
-      setMatchWinner("player");
-      setShowMatchAlert(true);
-      setLog((prev) => [...prev, "Congratulations! You won the match!"]);
-      
-      console.log("Match won, attempting to train creature with XP:", matchXp);
-      console.log("Current wallet state:", { wallet, connected: wallet?.connected, hasAccount: !!wallet?.account });
-      
+      const matchXp = Math.floor(Math.random() * 6) + 2
+      const updatedXp = updateXP(matchXp, null, true)
+      setLog((prev) => [...prev, `You earned ${matchXp} bonus XP for winning the match! (Total: ${updatedXp} XP)`])
+
+      setMatchWinner("player")
+      setShowMatchAlert(true)
+      setLog((prev) => [...prev, "Congratulations! You won the match!"])
+
+      console.log("Match won, attempting to train creature with XP:", matchXp)
+      console.log("Current wallet state:", { wallet, connected: wallet?.connected, hasAccount: !!wallet?.account })
+
       if (wallet && wallet.connected && wallet.account) {
         try {
           // 👇 Trigger on-chain XP gain transaction
-          setLog((prev) => [...prev, "🔄 Preparing blockchain XP transaction..."]);
-          await trainCreature(matchXp);
+          setLog((prev) => [...prev, "🔄 Preparing blockchain XP transaction..."])
+          trainCreature(matchXp)
         } catch (err) {
-          console.error("Failed to train creature after match win:", err);
-          setLog((prev) => [...prev, `⚠️ Blockchain XP transaction failed: ${err.message}`]);
+          console.error("Failed to train creature after match win:", err)
+          setLog((prev) => [...prev, `⚠️ Blockchain XP transaction failed: ${err.message}`])
         }
       } else {
-        console.log("Wallet not connected, skipping trainCreature call");
-        setLog((prev) => [...prev, "💡 Connect your wallet to earn XP on the blockchain!"]);
+        console.log("Wallet not connected, skipping trainCreature call")
+        setLog((prev) => [...prev, "💡 Connect your wallet to earn XP on the blockchain!"])
       }
     }
-  };
+  }
 
   const updateLosses = () => {
-    const newLosses = losses + 1;
-    setLosses(newLosses);
-    localStorage.setItem("losses", newLosses);
-    
+    const newLosses = losses + 1
+    setLosses(newLosses)
+
     // Award consolation XP for losing (1 XP)
-    const lossXp = 1;
-    const newXp = updateXP(lossXp);
-    setLog((prev) => [...prev, `You earned ${lossXp} XP for participating. (Total: ${newXp} XP)`]);
-    
+    const lossXp = 1
+    const newXp = updateXP(lossXp, false, null)
+    setLog((prev) => [...prev, `You earned ${lossXp} XP for participating. (Total: ${newXp} XP)`])
+
     // Update AI match wins
-    const newAiMatchWins = aiMatchWins + 1;
-    setAiMatchWins(newAiMatchWins);
-    setLog((prev) => [...prev, `AI won this round! (${newAiMatchWins}/4 wins)`]);
-    
+    const newAiMatchWins = aiMatchWins + 1
+    setAiMatchWins(newAiMatchWins)
+    setLog((prev) => [...prev, `AI won this round! (${newAiMatchWins}/4 wins)`])
+
     // Check if AI has won the match
     if (newAiMatchWins >= 4) {
       // Award consolation XP for completing a match
-      const matchXp = 3;
-      const updatedXp = updateXP(matchXp);
-      setLog((prev) => [...prev, `You earned ${matchXp} consolation XP for completing the match. (Total: ${updatedXp} XP)`]);
-      
-      setMatchWinner("ai");
-      setShowMatchAlert(true);
-      setLog((prev) => [...prev, "AI won the match! Better luck next time."]);
+      const matchXp = 3
+      const updatedXp = updateXP(matchXp, null, false)
+      setLog((prev) => [
+        ...prev,
+        `You earned ${matchXp} consolation XP for completing the match. (Total: ${updatedXp} XP)`,
+      ])
+
+      setMatchWinner("ai")
+      setShowMatchAlert(true)
+      setLog((prev) => [...prev, "AI won the match! Better luck next time."])
     }
-  };
+  }
 
   // Play a card from the bench
   const handlePlayCard = (card) => {
-    if (turn !== "player" || activeCard || gameOver) return;
-    
+    if (turn !== "player" || activeCard || gameOver) return
+
     // Set the selected card as active
-    setActiveCard(cloneCardWithHP(card));
-    
+    setActiveCard(cloneCardWithHP(card))
+
     // Remove the card from bench
-    setBench(bench.filter((c) => c.id !== card.id));
-    
+    setBench(bench.filter((c) => c.id !== card.id))
+
     // Add to used cards
-    setUsedCards((prev) => [...prev, card.id]);
-    
+    setUsedCards((prev) => [...prev, card.id])
+
     // Draw a new card from deck to bench if available
     if (deck.length > 0) {
-      const newCard = deck[0];
-      setBench(prevBench => [...prevBench, newCard]);
-      setDeck(prevDeck => prevDeck.slice(1));
-      setLog((prev) => [...prev, `You played ${card.name} and drew a new card to your bench.`]);
+      const newCard = deck[0]
+      setBench((prevBench) => [...prevBench, newCard])
+      setDeck((prevDeck) => prevDeck.slice(1))
+      setLog((prev) => [...prev, `You played ${card.name} and drew a new card to your bench.`])
     } else {
-      setLog((prev) => [...prev, `You played ${card.name}. No more cards in deck!`]);
+      setLog((prev) => [...prev, `You played ${card.name}. No more cards in deck!`])
     }
-  };
+  }
 
   const handleAttack = (attack) => {
-    if (turn !== "player" || !aiCard || !activeCard || gameOver) return;
+    if (turn !== "player" || !aiCard || !activeCard || gameOver) return
 
-    const newHP = aiCard.currentHP - attack.damage;
-    setLog((prev) => [
-      ...prev,
-      `You used ${attack.name} for ${attack.damage} damage!`,
-    ]);
+    const newHP = aiCard.currentHP - attack.damage
+    setLog((prev) => [...prev, `You used ${attack.name} for ${attack.damage} damage!`])
 
     if (newHP <= 0) {
-      setLog((prev) => [...prev, `AI's ${aiCard.name} was knocked out!`]);
+      setLog((prev) => [...prev, `AI's ${aiCard.name} was knocked out!`])
       // Add knocked out card to AI's knocked out pile
-      setAiKnockedOutCards(prev => [...prev, aiCard]);
-      setAiCard(null);
-      updateWins();
+      setAiKnockedOutCards((prev) => [...prev, aiCard])
+      setAiCard(null)
+      updateWins()
     } else {
-      setAiCard({ ...aiCard, currentHP: newHP });
+      setAiCard({ ...aiCard, currentHP: newHP })
     }
 
-    setTurn("ai");
-  };
+    setTurn("ai")
+  }
 
   const endTurn = () => {
-    if (turn !== "player" || gameOver) return;
-    setTurn("ai");
-  };
+    if (turn !== "player" || gameOver) return
+    setTurn("ai")
+  }
 
   const checkGameOver = () => {
-    const noBenchCards = bench.length === 0;
-    const noDeckCards = deck.length === 0;
-    const noActiveCard = !activeCard;
-    const noAiCardOrCards = !aiCard && aiCards.filter(c => !usedCards.includes(c.id)).length === 0;
-    
+    const noBenchCards = bench.length === 0
+    const noDeckCards = deck.length === 0
+    const noActiveCard = !activeCard
+    const noAiCardOrCards = !aiCard && aiCards.filter((c) => !usedCards.includes(c.id)).length === 0
+
     if ((noBenchCards && noDeckCards && noActiveCard) || noAiCardOrCards) {
-      setGameOver(true);
-      setLog((prev) => [...prev, "Game Over! No more cards available."]);
+      setGameOver(true)
+      setLog((prev) => [...prev, "Game Over! No more cards available."])
     }
-  };
+  }
 
   useEffect(() => {
-    checkGameOver();
+    checkGameOver()
 
     if (turn === "ai" && !gameOver) {
       const timeout = setTimeout(() => {
-        const remaining = aiCards.filter((c) => !usedCards.includes(c.id));
+        const remaining = aiCards.filter((c) => !usedCards.includes(c.id))
 
         if (!aiCard) {
           // Only set a new AI card if there's no current one
           if (remaining.length === 0) {
-            setLog((prev) => [...prev, "AI has no cards left."]);
-            setAiCard(null);
-            setTurn("player");
-            return;
+            setLog((prev) => [...prev, "AI has no cards left."])
+            setAiCard(null)
+            setTurn("player")
+            return
           }
 
-          const aiRandom =
-            remaining[Math.floor(Math.random() * remaining.length)];
-          const aiClone = cloneCardWithHP(aiRandom);
-          setAiCard(aiClone);
-          setUsedCards((prev) => [...prev, aiClone.id]);
-          setLog((prev) => [...prev, `AI played ${aiClone.name}`]);
-          setTurn("player");
-          return;
+          const aiRandom = remaining[Math.floor(Math.random() * remaining.length)]
+          const aiClone = cloneCardWithHP(aiRandom)
+          setAiCard(aiClone)
+          setUsedCards((prev) => [...prev, aiClone.id])
+          setLog((prev) => [...prev, `AI played ${aiClone.name}`])
+          setTurn("player")
+          return
         }
 
         // AI has an active card, so it attacks
         if (activeCard && aiCard.attacks.length > 0) {
-          const atk =
-            aiCard.attacks[Math.floor(Math.random() * aiCard.attacks.length)];
-          const newHP = activeCard.currentHP - atk.damage;
+          const atk = aiCard.attacks[Math.floor(Math.random() * aiCard.attacks.length)]
+          const newHP = activeCard.currentHP - atk.damage
 
-          setLog((prev) => [
-            ...prev,
-            `AI used ${atk.name} for ${atk.damage} damage!`,
-          ]);
+          setLog((prev) => [...prev, `AI used ${atk.name} for ${atk.damage} damage!`])
 
           if (newHP <= 0) {
-            setLog((prev) => [...prev, `Your ${activeCard.name} was knocked out!`]);
-            setKnockedOutCards((prev) => [...prev, activeCard]);
-            setActiveCard(null);
-            updateLosses();
+            setLog((prev) => [...prev, `Your ${activeCard.name} was knocked out!`])
+            setKnockedOutCards((prev) => [...prev, activeCard])
+            setActiveCard(null)
+            updateLosses()
           } else {
-            setActiveCard({ ...activeCard, currentHP: newHP });
+            setActiveCard({ ...activeCard, currentHP: newHP })
           }
         }
 
-        setTurn("player");
-      }, 1200);
+        setTurn("player")
+      }, 1200)
 
-      return () => clearTimeout(timeout);
+      return () => clearTimeout(timeout)
     }
-  }, [turn]);
+  }, [turn])
 
   const resetGame = () => {
-    setActiveCard(null);
-    setAiCard(null);
-    setBench([]);
-    setDeck([]);
-    setUsedCards([]);
-    setKnockedOutCards([]);
-    setAiKnockedOutCards([]);
-    setTurn("player");
-    setGameOver(false);
-    setLog([]);
-    initializeGame();
-  };
+    setActiveCard(null)
+    setAiCard(null)
+    setBench([])
+    setDeck([])
+    setUsedCards([])
+    setKnockedOutCards([])
+    setAiKnockedOutCards([])
+    setTurn("player")
+    setGameOver(false)
+    setLog([])
+    initializeGame()
+  }
 
   const startNewMatch = () => {
-    setPlayerMatchWins(0);
-    setAiMatchWins(0);
-    setMatchWinner(null);
-    setShowMatchAlert(false);
-    resetGame();
-  };
+    setPlayerMatchWins(0)
+    setAiMatchWins(0)
+    setMatchWinner(null)
+    setShowMatchAlert(false)
+    resetGame()
+  }
 
   // Close the match winner alert
   const closeMatchAlert = () => {
-    setShowMatchAlert(false);
-  };
+    setShowMatchAlert(false)
+  }
 
   // Close the level up alert
   const closeLevelUpAlert = () => {
-    setShowLevelUpAlert(false);
-  };
+    setShowLevelUpAlert(false)
+  }
 
   // Reset XP and levels
-  const resetXP = () => {
-    const confirmed = window.confirm("Reset XP and level progress?");
+  const resetXP = async () => {
+    const confirmed = window.confirm("Reset XP and level progress?")
     if (confirmed) {
-      localStorage.removeItem("playerXP");
-      setXp(0);
-      calculateLevel(0);
-      setLog((prev) => [...prev, "XP and level progress reset."]);
+      setXp(0)
+      calculateLevel(0)
+      setLog((prev) => [...prev, "XP and level progress reset."])
+
+      // Reset stats on server if authenticated
+      if (isAuthenticated && user?.token) {
+        try {
+          await fetch(`${API_URL}/game/reset-stats`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${user.token}`,
+            },
+          })
+        } catch (error) {
+          console.error("Failed to reset stats on server:", error)
+        }
+      }
     }
-  };
+  }
 
   // Calculate XP progress percentage for the progress bar
   const getXpProgressPercentage = () => {
-    if (xpToNextLevel === "MAX") return 100;
-    
-    const currentLevelObj = XP_LEVELS.find(l => l.level === level);
-    const nextLevelObj = XP_LEVELS.find(l => l.level === level + 1);
-    
-    if (!nextLevelObj) return 100;
-    
-    const levelMinXp = currentLevelObj.xpRequired;
-    const xpRange = nextLevelObj.xpRequired - levelMinXp;
-    const playerProgress = xp - levelMinXp;
-    
-    return Math.min(100, Math.round((playerProgress / xpRange) * 100));
-  };
+    if (xpToNextLevel === "MAX") return 100
+
+    const currentLevelObj = XP_LEVELS.find((l) => l.level === level)
+    const nextLevelObj = XP_LEVELS.find((l) => l.level === level + 1)
+
+    if (!nextLevelObj) return 100
+
+    const levelMinXp = currentLevelObj.xpRequired
+    const xpRange = nextLevelObj.xpRequired - levelMinXp
+    const playerProgress = xp - levelMinXp
+
+    return Math.min(100, Math.round((playerProgress / xpRange) * 100))
+  }
 
   return (
     <div className="p-6 text-gray-500 font-bold">
@@ -480,51 +613,43 @@ const GameBoard = ({ wallet }) => {
         <div className="flex justify-between items-center mb-1">
           <div className="font-bold">Level {level}</div>
           <div className="text-sm">
-            {xpToNextLevel === "MAX" ? 
-              "MAX LEVEL" : 
-              `${xp} / ${xpToNextLevel + xp} XP to Level ${level + 1}`}
+            {xpToNextLevel === "MAX" ? "MAX LEVEL" : `${xp} / ${xpToNextLevel + xp} XP to Level ${level + 1}`}
           </div>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-4">
-          <div 
+          <div
             className="bg-blue-600 h-4 rounded-full transition-all duration-500"
             style={{ width: `${getXpProgressPercentage()}%` }}
           ></div>
         </div>
         <div className="flex justify-between mt-2">
-          <div className="text-sm font-semibold">Rank: {
-            level <= 3 ? "Rookie Trainer" :
-            level <= 5 ? "Skilled Trainer" :
-            level <= 7 ? "Expert Trainer" :
-            level <= 9 ? "Master Trainer" : "Pokémon Champion"
-          }</div>
-          <button 
-            onClick={resetXP}
-            className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
-          >
+          <div className="text-sm font-semibold">
+            Rank:{" "}
+            {level <= 3
+              ? "Rookie Trainer"
+              : level <= 5
+                ? "Skilled Trainer"
+                : level <= 7
+                  ? "Expert Trainer"
+                  : level <= 9
+                    ? "Master Trainer"
+                    : "Pokémon Champion"}
+          </div>
+          <button onClick={resetXP} className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">
             Reset XP
           </button>
         </div>
       </div>
 
       <div className="flex justify-between px-8 mb-6">
-        <p className="font-semibold">
-          Turn:{" "}
-          {gameOver ? "Game Over" : turn === "player" ? "Your Turn" : "AI Turn"}
-        </p>
+        <p className="font-semibold">Turn: {gameOver ? "Game Over" : turn === "player" ? "Your Turn" : "AI Turn"}</p>
         {!gameOver && turn === "player" && (
-          <button
-            onClick={endTurn}
-            className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
-          >
+          <button onClick={endTurn} className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600">
             End Turn
           </button>
         )}
         {gameOver && (
-          <button
-            onClick={resetGame}
-            className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600"
-          >
+          <button onClick={resetGame} className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600">
             New Game
           </button>
         )}
@@ -532,10 +657,12 @@ const GameBoard = ({ wallet }) => {
 
       {/* Match Tracker */}
       <div className="flex justify-center gap-8 mb-4">
-        <div className={`px-4 py-2 rounded-lg shadow ${playerMatchWins > aiMatchWins ? 'bg-green-100' : 'bg-gray-100'}`}>
+        <div
+          className={`px-4 py-2 rounded-lg shadow ${playerMatchWins > aiMatchWins ? "bg-green-100" : "bg-gray-100"}`}
+        >
           Your Match Wins: <strong>{playerMatchWins}/4</strong>
         </div>
-        <div className={`px-4 py-2 rounded-lg shadow ${aiMatchWins > playerMatchWins ? 'bg-red-100' : 'bg-gray-100'}`}>
+        <div className={`px-4 py-2 rounded-lg shadow ${aiMatchWins > playerMatchWins ? "bg-red-100" : "bg-gray-100"}`}>
           AI Match Wins: <strong>{aiMatchWins}/4</strong>
         </div>
       </div>
@@ -544,9 +671,7 @@ const GameBoard = ({ wallet }) => {
       {showMatchAlert && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-lg shadow-lg max-w-md text-center">
-            <h2 className="text-2xl font-bold mb-4">
-              {matchWinner === "player" ? "Congratulations!" : "Game Over"}
-            </h2>
+            <h2 className="text-2xl font-bold mb-4">{matchWinner === "player" ? "Congratulations!" : "Game Over"}</h2>
             <p className="text-xl mb-6">
               {matchWinner === "player"
                 ? "You won the match by winning 4 rounds!"
@@ -612,9 +737,7 @@ const GameBoard = ({ wallet }) => {
         <div className="col-span-5">
           {/* AI's Side */}
           <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2 text-center">
-              AI's Active Pokémon
-            </h2>
+            <h2 className="text-xl font-semibold mb-2 text-center">AI's Active Pokémon</h2>
             <div className="flex justify-center">
               {aiCard ? (
                 <Card card={aiCard} isInBattle />
@@ -635,9 +758,7 @@ const GameBoard = ({ wallet }) => {
 
           {/* Player's Active Card */}
           <div className="mt-6">
-            <h2 className="text-xl font-semibold mb-2 text-center">
-              Your Active Pokémon
-            </h2>
+            <h2 className="text-xl font-semibold mb-2 text-center">Your Active Pokémon</h2>
             <div className="flex justify-center">
               {activeCard ? (
                 <Card card={activeCard} isInBattle onAttack={handleAttack} />
@@ -654,11 +775,7 @@ const GameBoard = ({ wallet }) => {
             <h2 className="text-lg font-semibold text-center">Your Bench</h2>
             <div className="flex justify-center flex-wrap gap-4 mt-2">
               {bench.map((card) => (
-                <Card 
-                  key={card.id} 
-                  card={card} 
-                  onPlay={() => handlePlayCard(card)} 
-                />
+                <Card key={card.id} card={card} onPlay={() => handlePlayCard(card)} />
               ))}
             </div>
           </div>
@@ -710,19 +827,7 @@ const GameBoard = ({ wallet }) => {
       </div>
 
       <div className="text-center mt-3">
-        <button
-          onClick={() => {
-            const confirmed = window.confirm("Reset wins and losses?");
-            if (confirmed) {
-              localStorage.removeItem("wins");
-              localStorage.removeItem("losses");
-              setWins(0);
-              setLosses(0);
-              setLog((prev) => [...prev, "Stats reset."]);
-            }
-          }}
-          className="mt-2 text-sm bg-gray-300 px-3 py-1 rounded hover:bg-gray-400"
-        >
+        <button onClick={resetXP} className="mt-2 text-sm bg-gray-300 px-3 py-1 rounded hover:bg-gray-400">
           Reset Stats
         </button>
       </div>
@@ -736,7 +841,7 @@ const GameBoard = ({ wallet }) => {
         </ul>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default GameBoard;
+export default GameBoard
