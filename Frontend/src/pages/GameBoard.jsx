@@ -33,6 +33,15 @@ const XP_LEVELS = [
   { level: 10, xpRequired: 2500, reward: "Legendary Card" },
 ]
 
+// Local storage keys
+const STORAGE_KEYS = {
+  XP: "pokemon_game_xp",
+  LEVEL: "pokemon_game_level",
+  WINS: "pokemon_game_wins",
+  LOSSES: "pokemon_game_losses",
+  LAST_UPDATED: "pokemon_game_last_updated",
+}
+
 const cloneCardWithHP = (card) => ({
   ...card,
   currentHP: card.hp,
@@ -93,18 +102,13 @@ const GameBoard = ({ wallet }) => {
   // Server update interval (3 minutes = 180000ms)
   const SERVER_UPDATE_INTERVAL = 180000
 
-  // Load user stats from server when authenticated
+  // Load user stats from localStorage first, then from server when authenticated
   useEffect(() => {
+    // First load from localStorage
+    loadStatsFromLocalStorage()
+
+    // Then, if authenticated, fetch from server
     if (isAuthenticated && user) {
-      // Set initial stats from user data
-      setXp(user.xp || 0)
-      setWins(user.wins || 0)
-      setLosses(user.losses || 0)
-
-      // Calculate level based on XP
-      calculateLevel(user.xp || 0)
-
-      // Fetch latest stats from server
       fetchUserStats()
     }
   }, [isAuthenticated, user])
@@ -158,6 +162,9 @@ const GameBoard = ({ wallet }) => {
             lastUpdated: Date.now(),
           }
 
+          // Update last updated timestamp in localStorage
+          localStorage.setItem(STORAGE_KEYS.LAST_UPDATED, Date.now().toString())
+
           console.log("Stats updated on server")
         } catch (error) {
           console.error("Failed to update stats on server:", error)
@@ -175,6 +182,46 @@ const GameBoard = ({ wallet }) => {
     }
   }, [isAuthenticated, user])
 
+  // Load stats from localStorage
+  const loadStatsFromLocalStorage = () => {
+    try {
+      // Get values from localStorage with fallbacks to default values
+      const storedXp = localStorage.getItem(STORAGE_KEYS.XP)
+      const storedLevel = localStorage.getItem(STORAGE_KEYS.LEVEL)
+      const storedWins = localStorage.getItem(STORAGE_KEYS.WINS)
+      const storedLosses = localStorage.getItem(STORAGE_KEYS.LOSSES)
+
+      // Update state with localStorage values if they exist
+      if (storedXp !== null) setXp(Number.parseInt(storedXp, 10))
+      if (storedLevel !== null) setLevel(Number.parseInt(storedLevel, 10))
+      if (storedWins !== null) setWins(Number.parseInt(storedWins, 10))
+      if (storedLosses !== null) setLosses(Number.parseInt(storedLosses, 10))
+
+      // Calculate level info based on XP
+      if (storedXp !== null) {
+        const levelInfo = calculateLevel(Number.parseInt(storedXp, 10))
+        setXpToNextLevel(levelInfo.nextLevelXp)
+      }
+
+      console.log("Stats loaded from localStorage")
+    } catch (error) {
+      console.error("Error loading stats from localStorage:", error)
+    }
+  }
+
+  // Save stats to localStorage
+  const saveStatsToLocalStorage = (newXp, newLevel, newWins, newLosses) => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.XP, newXp.toString())
+      localStorage.setItem(STORAGE_KEYS.LEVEL, newLevel.toString())
+      localStorage.setItem(STORAGE_KEYS.WINS, newWins.toString())
+      localStorage.setItem(STORAGE_KEYS.LOSSES, newLosses.toString())
+      localStorage.setItem(STORAGE_KEYS.LAST_UPDATED, Date.now().toString())
+    } catch (error) {
+      console.error("Error saving stats to localStorage:", error)
+    }
+  }
+
   // Fetch user stats from server
   const fetchUserStats = async () => {
     if (!isAuthenticated || !user?.token) return
@@ -190,10 +237,27 @@ const GameBoard = ({ wallet }) => {
 
       if (response.ok) {
         const userData = await response.json()
-        setXp(userData.xp || 0)
-        setWins(userData.wins || 0)
-        setLosses(userData.losses || 0)
-        calculateLevel(userData.xp || 0)
+
+        // Only update local state if server data is newer or localStorage is empty
+        const lastUpdated = localStorage.getItem(STORAGE_KEYS.LAST_UPDATED)
+        const localXp = localStorage.getItem(STORAGE_KEYS.XP)
+
+        if (!lastUpdated || !localXp || Number.parseInt(userData.xp, 10) > Number.parseInt(localXp, 10)) {
+          const xpValue = userData.xp || 0
+          const winsValue = userData.wins || 0
+          const lossesValue = userData.losses || 0
+
+          setXp(xpValue)
+          setWins(winsValue)
+          setLosses(lossesValue)
+
+          const levelInfo = calculateLevel(xpValue)
+          setLevel(levelInfo.playerLevel)
+          setXpToNextLevel(levelInfo.nextLevelXp)
+
+          // Update localStorage with server data
+          saveStatsToLocalStorage(xpValue, levelInfo.playerLevel, winsValue, lossesValue)
+        }
       }
     } catch (error) {
       console.error("Failed to fetch user stats:", error)
@@ -220,7 +284,7 @@ const GameBoard = ({ wallet }) => {
     return { playerLevel, nextLevelXp, reward }
   }
 
-  // Update XP and check for level ups - only updates local state
+  // Update XP and check for level ups - updates local state and localStorage
   const updateXP = (amount, isWin = null, isMatchWin = null) => {
     // Update local state immediately for UI
     const oldXp = xp
@@ -230,12 +294,28 @@ const GameBoard = ({ wallet }) => {
     // Check if player leveled up
     const oldLevel = calculateLevel(oldXp).playerLevel
     const newLevelInfo = calculateLevel(newXp)
+    const newLevel = newLevelInfo.playerLevel
 
-    if (newLevelInfo.playerLevel > oldLevel) {
+    if (newLevel > oldLevel) {
       setLevelUpReward(newLevelInfo.reward)
       setShowLevelUpAlert(true)
-      setLog((prev) => [...prev, `🎉 LEVEL UP! You are now level ${newLevelInfo.playerLevel}!`])
+      setLog((prev) => [...prev, `🎉 LEVEL UP! You are now level ${newLevel}!`])
     }
+
+    // Update wins/losses if needed
+    let newWins = wins
+    let newLosses = losses
+
+    if (isWin === true) {
+      newWins += 1
+      setWins(newWins)
+    } else if (isWin === false) {
+      newLosses += 1
+      setLosses(newLosses)
+    }
+
+    // Save to localStorage
+    saveStatsToLocalStorage(newXp, newLevel, newWins, newLosses)
 
     // Queue updates to send to server later
     const updates = pendingUpdatesRef.current
@@ -567,9 +647,13 @@ const GameBoard = ({ wallet }) => {
   const resetXP = async () => {
     const confirmed = window.confirm("Reset XP and level progress?")
     if (confirmed) {
+      // Reset local state
       setXp(0)
       calculateLevel(0)
       setLog((prev) => [...prev, "XP and level progress reset."])
+
+      // Reset localStorage
+      saveStatsToLocalStorage(0, 1, wins, losses)
 
       // Reset stats on server if authenticated
       if (isAuthenticated && user?.token) {
