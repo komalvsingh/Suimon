@@ -12,6 +12,7 @@ import DetailPage from "./components/DetailPage";
 import StarterPickerPage from "./pages/StarterPickerPage";
 import GameBoard from "./pages/GameBoard";
 import PokemonGymBattle from "./game/PokemonGymBrawler.jsx";
+import PokemonBattle from "./brawl/PokemonBattle.jsx";
 import { Web3Provider } from "./game/web3Context.jsx";
 import PokemonPuzzleRush from "./components/BattleArena.jsx";
 
@@ -62,6 +63,7 @@ function App() {
         case "starter-picker": return "border-b-2 border-emerald-400 shadow-emerald-400/50";
         case "tcg": return "border-b-2 border-yellow-400 shadow-yellow-400/50";
         case "gym-brawler": return "border-b-2 border-orange-400 shadow-orange-400/50";
+        case "pokemon-brawl": return "border-b-2 border-red-400 shadow-red-400/50";
         default: return "border-b-2 border-fuchsia-500";
       }
     }
@@ -78,6 +80,7 @@ function App() {
       case "starter-picker": return colors.accent4;
       case "tcg": return "text-yellow-400";
       case "gym-brawler": return "text-orange-400";
+      case "pokemon-brawl": return "text-red-400";
       default: return colors.primary;
     }
   };
@@ -123,6 +126,7 @@ function App() {
               { id: "starter-picker", name: "Mint Starter" },
               { id: "tcg", name: "Pokemon Game-tcg" },
               { id: "gym-brawler", name: "Gym Brawler" },
+              { id: "pokemon-brawl", name: "Pokemon Brawl" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -176,6 +180,11 @@ function App() {
             {activeTab === "gym-brawler" && (
               <div className="animate-fadeIn">
                 <PokemonGymBattle />
+              </div>
+            )}
+            {activeTab === "pokemon-brawl" && (
+              <div className="animate-fadeIn">
+                <PokemonBattle />
               </div>
             )}
             {activeTab === "pokidesk" && (
