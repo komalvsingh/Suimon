@@ -17,6 +17,7 @@
     "@suiet/wallet-kit": "^0.3.4",
     "@tailwindcss/vite": "^4.0.4",
     "framer-motion": "^12.9.4",
+    "lucide-react": "^0.511.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",

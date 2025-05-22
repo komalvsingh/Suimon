@@ -13,6 +13,7 @@ import StarterPickerPage from "./pages/StarterPickerPage";
 import GameBoard from "./pages/GameBoard";
 import PokemonGymBattle from "./game/PokemonGymBrawler.jsx";
 import { Web3Provider } from "./game/web3Context.jsx";
+import PokemonPuzzleRush from "./components/BattleArena.jsx";
 
 function App() {
   const [activeTab, setActiveTab] = useState("wallet");
@@ -154,7 +155,7 @@ function App() {
             )}
             {activeTab === "battle" && (
               <div className="animate-fadeIn">
-                <BattleArena wallet={wallet} />
+                <PokemonPuzzleRush wallet={wallet} />
               </div>
             )}
             {activeTab === "leaderboard" && (
