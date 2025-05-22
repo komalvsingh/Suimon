@@ -1,27 +1,38 @@
 import React, { useState } from "react";
 import { useWallet } from "@suiet/wallet-kit";
-import { Transaction } from '@mysten/sui/transactions';
+import { TransactionBlock } from "@mysten/sui.js/transactions";
 import { PACKAGE_ID, MODULE_NAME } from "../lib/constants";
 
 export default function GainXPButton({ id }) {
   const wallet = useWallet();
   const [loading, setLoading] = useState(false);
 
-  const handleGainXP = async () => {
-    if (!wallet.connected) return;
-    setLoading(true);
-    const tx = new Transaction();
+  // Debug logs
+  console.log("GainXPButton - id:", id);
+  console.log("GainXPButton - wallet.connected:", wallet.connected);
 
-    tx.moveCall({
-      target: `${PACKAGE_ID}::${MODULE_NAME}::gain_xp`,
-      arguments: [
-        tx.object(id),
-        tx.pure(50), // Add 50 XP
-      ],
-    });
+  // If ID is not defined, do not show the button
+  if (!id) return <p className="text-gray-500 italic">Loading Creature...</p>;
+
+  const handleGainXP = async () => {
+    if (!wallet.connected || !id) {
+      alert("Wallet not connected or Creature ID missing.");
+      return;
+    }
+
+    setLoading(true);
+    const tx = new TransactionBlock();
 
     try {
-      const result = await wallet.signAndExecuteTransactionBlock({ transactionBlock: tx });
+      tx.moveCall({
+        target: `${PACKAGE_ID}::${MODULE_NAME}::gain_xp`,
+        arguments: [tx.object(id), tx.pure(50)],
+      });
+
+      const result = await wallet.signAndExecuteTransactionBlock({
+        transactionBlock: tx,
+      });
+
       console.log("XP updated:", result);
       alert("XP gained! Refresh to see changes.");
     } catch (err) {
@@ -36,7 +47,7 @@ export default function GainXPButton({ id }) {
     <button
       onClick={handleGainXP}
       disabled={loading}
-      className="mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      className="mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
     >
       {loading ? "Gaining XP..." : "Gain XP"}
     </button>
