@@ -148,78 +148,78 @@ const PokemonPuzzleRush = ({ wallet }) => {
   }, []);
 
   // Blockchain training function (same as GameBoard)
-  const trainCreature = async (xpAmount) => {
-    console.log("trainCreature called with xpAmount:", xpAmount);
-    console.log("Wallet status:", { connected: wallet?.connected, hasAccount: !!wallet?.account });
+ // Blockchain training function (same as GameBoard)
+ const trainCreature = async (xpAmount) => {
+  console.log("trainCreature called with xpAmount:", xpAmount);
+  console.log("Wallet status:", { connected: wallet?.connected, hasAccount: !!wallet?.account });
+  
+  if (!wallet || !wallet.connected || !wallet.account) {
+    console.log("Wallet not connected, skipping blockchain XP gain");
+    addToLog("Wallet not connected. Blockchain XP gain skipped.");
+    return;
+  }
+  
+  try {
+    setTraining(true);
+    addToLog(`🔄 Initiating blockchain training (${xpAmount} XP)...`);
     
-    if (!wallet || !wallet.connected || !wallet.account) {
-      console.log("Wallet not connected, skipping blockchain XP gain");
-      addToLog("Wallet not connected. Blockchain XP gain skipped.");
+    // Create a transaction block
+    const txb = new TransactionBlock();
+    console.log("Transaction block created");
+    
+    // Get the creature objects from wallet
+    console.log("Fetching owned objects from wallet:", wallet.account.address);
+    const nfts = await TESTNET_CLIENT.getOwnedObjects({
+      owner: wallet.account.address,
+      options: {
+        showContent: true,
+        showType: true,
+      },
+    });
+    
+    console.log("NFTs found in wallet:", nfts.data.length);
+    
+    // Find a valid creature to train - look for the correct module type
+    const creature = nfts.data.find((obj) => {
+      const type = obj.data?.type;
+      const isTrainable = type && type.includes(`${CONTRACT_ADDRESS}::starter_nft::StarterNFT`);
+      console.log("Checking NFT:", { objectId: obj.data?.objectId, type, isTrainable });
+      return isTrainable;
+    });
+    
+    if (!creature) {
+      console.log("No trainable creatures found in wallet");
+      addToLog("No trainable StarterNFT found in wallet.");
       return;
     }
     
-    try {
-      setTraining(true);
-      addToLog(`🔄 Initiating blockchain training (${xpAmount} XP)...`);
-      
-      // Create a transaction block
-      const txb = new TransactionBlock();
-      console.log("Transaction block created");
-      
-      // Get the creature objects from wallet
-      console.log("Fetching owned objects from wallet:", wallet.account.address);
-      const nfts = await TESTNET_CLIENT.getOwnedObjects({
-        owner: wallet.account.address,
-        options: {
-          showContent: true,
-          showType: true,
-        },
-      });
-      
-      console.log("NFTs found in wallet:", nfts.data.length);
-      
-      // Find a valid creature to train
-      const creature = nfts.data.find((obj) => {
-        const type = obj.data?.type;
-        const isTrainable = type && (type.includes("starter_nft") || type.includes("suimon") || type.includes("creature"));
-        console.log("Checking NFT:", { objectId: obj.data?.objectId, type, isTrainable });
-        return isTrainable;
-      });
-      
-      if (!creature) {
-        console.log("No trainable creatures found in wallet");
-        addToLog("No trainable creatures found in wallet.");
-        return;
-      }
-      
-      console.log("Found trainable creature:", creature.data.objectId);
-      
-      // Call the gain_experience function on the smart contract
-      txb.moveCall({
-        target: `${CONTRACT_ADDRESS}::starter_nft::gain_experience`,
-        arguments: [
-          txb.object(creature.data.objectId), // NFT object ID
-          txb.pure(xpAmount), // Experience amount to gain
-        ],
-      });
-      
-      console.log("Move call prepared, executing transaction...");
-      
-      // Execute the transaction
-      const { response } = await wallet.signAndExecuteTransactionBlock({
-        transactionBlock: txb,
-      });
-      
-      console.log("Transaction successful:", response);
-      addToLog(`🎮 Blockchain training successful! Your creature gained ${xpAmount} XP on-chain.`);
-    } catch (err) {
-      console.error("Training transaction failed:", err);
-      addToLog(`⚠️ Blockchain training failed: ${err.message}`);
-    } finally {
-      setTraining(false);
-    }
-  };
-
+    console.log("Found trainable creature:", creature.data.objectId);
+    
+    // Call the train function instead of gain_experience
+    txb.moveCall({
+      target: `${CONTRACT_ADDRESS}::starter_nft::gain_experience`,
+      arguments: [
+        txb.object(creature.data.objectId), // NFT object ID
+        txb.pure.u64(xpAmount), // Experience amount as u64
+      ],
+    });
+    
+    console.log("Move call prepared, executing transaction...");
+    
+    // Execute the transaction
+    const { response } = await wallet.signAndExecuteTransactionBlock({
+      transactionBlock: txb,
+    });
+    
+    console.log("Transaction successful:", response);
+    addToLog(`🎮 Blockchain training successful! Your creature gained ${xpAmount} XP on-chain.`);
+  } catch (err) {
+    console.error("Training transaction failed:", err);
+    addToLog(`⚠️ Blockchain training failed: ${err.message}`);
+  } finally {
+    setTraining(false);
+  }
+};
   // Update XP and check for level ups (same as GameBoard)
   const updateXP = useCallback((amount) => {
     const oldXp = xp;
