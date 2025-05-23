@@ -57,11 +57,11 @@ const StarterPicker = () => {
       setError('');
 
       // Package ID from your published contract
-      const packageId = '0x2e493caf3bd0b6eb3fbf2c8ef298a4cb71cd50af5c7b5b31c387a2d66d24091d';
+      const packageId = '0x70217963607936caee034ce016fb2e9be0debc644d13a6ac40d955940e1066a7';
       const moduleId = 'starter_nft';
       
       // MintedRecord object ID from your published contract
-      const mintedRecordId = '0x75290496fb003d4f36494240877688a595a7635820768d044ab4638742b1e1d8';
+      const mintedRecordId = '0xe0fd566dfd14df738ec42b1e7e04e02ca05fff14964583b2e7c4cb1bebcaba4e';
       
       // Create a proper transaction block using Sui.js
       const txb = new TransactionBlock();
