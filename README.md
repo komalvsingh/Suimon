@@ -1,7 +1,3 @@
-Sure! Here’s your project structured using the format you provided:
-
----
-
 # 🚀 Suimon: A Decentralized Gaming & Governance Platform
 
 > A full-stack Web3 game and DAO platform powered by Sui blockchain and Move smart contracts.
