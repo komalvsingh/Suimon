@@ -59,30 +59,28 @@ export const attacks = {
 
 // Pokemon evolution data
 export const evolutions = {
-  charmander: {
-    stage1: "charmeleon",
-    stage2: "charizard",
-    levelNeeded: [10, 20]
-  },
-  squirtle: {
-    stage1: "wartortle",
-    stage2: "blastoise",
-    levelNeeded: [10, 20]
-  },
+  charmander: { stage1: "charmeleon", stage2: "charizard", levelNeeded: [10, 20] },
+  charmeleon: { stage1: null, stage2: "charizard", levelNeeded: [null, 20] },
+  squirtle: { stage1: "wartortle", stage2: "blastoise", levelNeeded: [10, 20] },
+  wartortle: { stage1: null, stage2: "blastoise", levelNeeded: [null, 20] },
   bulbasaur: { stage1: "ivysaur", stage2: "venusaur", levelNeeded: [10, 20] },
+  ivysaur: { stage1: null, stage2: "venusaur", levelNeeded: [null, 20] },
   caterpie: { stage1: "metapod", stage2: "butterfree", levelNeeded: [7, 15] },
+  metapod: { stage1: null, stage2: "butterfree", levelNeeded: [null, 15] },
   weedle: { stage1: "kakuna", stage2: "beedrill", levelNeeded: [7, 15] },
+  kakuna: { stage1: null, stage2: "beedrill", levelNeeded: [null, 15] },
   pidgey: { stage1: "pidgeotto", stage2: "pidgeot", levelNeeded: [10, 20] },
+  pidgeotto: { stage1: null, stage2: "pidgeot", levelNeeded: [null, 20] },
   spearow: { stage1: "fearow", stage2: null, levelNeeded: [15, null] },
   gastly: { stage1: "haunter", stage2: "gengar", levelNeeded: [12, 25] },
+  haunter: { stage1: null, stage2: "gengar", levelNeeded: [null, 25] },
   machop: { stage1: "machoke", stage2: "machamp", levelNeeded: [12, 25] },
+  machoke: { stage1: null, stage2: "machamp", levelNeeded: [null, 25] },
   psyduck: { stage1: "golduck", stage2: null, levelNeeded: [15, null] },
-  dratini: {
-    stage1: "dragonair",
-    stage2: "dragonite",
-    levelNeeded: [15, 28],
-  },
+  dratini: { stage1: "dragonair", stage2: "dragonite", levelNeeded: [15, 28] },
+  dragonair: { stage1: null, stage2: "dragonite", levelNeeded: [null, 28] }
 };
+
 
 // Experience points needed for each level (1-30)
 export const expForLevel = [
