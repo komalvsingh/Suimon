@@ -24,6 +24,7 @@ function App() {
   const [headerGlow, setHeaderGlow] = useState(false);
   const [tabHover, setTabHover] = useState("");
   const [footerPulse, setFooterPulse] = useState(0);
+  const [showAllTabs, setShowAllTabs] = useState(false);
   const wallet = useWallet();
 
   // Enhanced animation effect when changing tabs
@@ -122,19 +123,23 @@ function App() {
     return `${baseColor} hover:${strongGlow} transition-all duration-300`;
   };
 
-  // Reordered tabs with Mint Starter first
-  const tabs = [
-    { id: "mint-starter", name: "🌟 Mint Starter" },
-    { id: "wallet", name: "💰 Wallet" },
-    { id: "creatures", name: "👾 Creatures" },
-    { id: "battle", name: "⚔️ Pokemon Puzzle Rush" },
-    { id: "leaderboard", name: "🏆 Leaderboard" },
-    { id: "pokidesk", name: "📱 My PokiDesk" },
-    { id: "dao", name: "🏛️ DAO" },
-    { id: "tcg", name: "🎴 Pokemon Game-TCG" },
-    { id: "gym-brawler", name: "🥊 Gym Brawler" },
-    { id: "pokemon-brawl", name: "⚡ Pokemon Brawl" },
+  // All tabs data
+  const allTabs = [
+    { id: "mint-starter", name: "🌟 Mint Starter", priority: 1 },
+    { id: "wallet", name: "💰 Wallet", priority: 1 },
+    { id: "creatures", name: "👾 Creatures", priority: 1 },
+    { id: "battle", name: "⚔️ Pokemon Puzzle Rush", priority: 2 },
+    { id: "leaderboard", name: "🏆 Leaderboard", priority: 2 },
+    { id: "pokidesk", name: "📱 My PokiDesk", priority: 2 },
+    { id: "dao", name: "🏛️ DAO", priority: 3 },
+    { id: "tcg", name: "🎴 Pokemon Game-TCG", priority: 3 },
+    { id: "gym-brawler", name: "🥊 Gym Brawler", priority: 3 },
+    { id: "pokemon-brawl", name: "⚡ Pokemon Brawl", priority: 3 },
   ];
+
+  // Show main tabs by default, with option to expand
+  const visibleTabs = showAllTabs ? allTabs : allTabs.filter(tab => tab.priority <= 2);
+  const hiddenTabsCount = allTabs.length - visibleTabs.length;
 
   return (
     <Router>
@@ -195,32 +200,61 @@ function App() {
           </div>
         </header>
 
-        {/* Enhanced Navigation Tabs */}
-        <nav className="bg-gray-800/80 p-4 backdrop-blur-md sticky top-0 z-50 border-b-2 border-gray-700 shadow-xl overflow-x-auto">
+        {/* Enhanced Navigation Tabs - Responsive Grid Layout */}
+        <nav className="bg-gray-800/80 p-4 backdrop-blur-md sticky top-0 z-50 border-b-2 border-gray-700 shadow-xl">
           <div className="container mx-auto">
-            <div className="flex items-center justify-start gap-2 min-w-max px-2">
-              {tabs.map((tab, index) => (
+            {/* Primary tabs - always visible */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 mb-2">
+              {visibleTabs.map((tab, index) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   onMouseEnter={() => setTabHover(tab.id)}
                   onMouseLeave={() => setTabHover("")}
-                  className={`px-4 py-2 rounded-lg ${getNeonBorder(tab.id)} ${getTabColor(tab.id)} 
+                  className={`px-3 py-2 rounded-lg text-sm ${getNeonBorder(tab.id)} ${getTabColor(tab.id)} 
                     transition-all duration-300 hover:bg-gray-700/50 hover:scale-105 hover:-translate-y-1
-                    transform ${activeTab === tab.id ? "scale-105 font-bold text-lg shadow-2xl" : "hover:shadow-lg"}
+                    transform ${activeTab === tab.id ? "scale-105 font-bold shadow-2xl" : "hover:shadow-lg"}
                     ${tabHover === tab.id ? "animate-pulse" : ""}
-                    backdrop-blur-sm border border-gray-600 hover:border-gray-400 whitespace-nowrap flex-shrink-0`}
+                    backdrop-blur-sm border border-gray-600 hover:border-gray-400 text-center min-h-[3rem] flex items-center justify-center`}
                   style={{ 
                     animationDelay: `${index * 0.1}s`,
                     background: activeTab === tab.id ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)'
                   }}
                 >
-                  {tab.name}
+                  <span className="break-words leading-tight">{tab.name}</span>
                   {activeTab === tab.id && (
-                    <div className="h-0.5 mt-1 bg-gradient-to-r from-transparent via-current to-transparent animate-pulse rounded-full"></div>
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 w-3/4 bg-gradient-to-r from-transparent via-current to-transparent animate-pulse rounded-full"></div>
                   )}
                 </button>
               ))}
+            </div>
+
+            {/* Show More/Less Button */}
+            {hiddenTabsCount > 0 && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setShowAllTabs(!showAllTabs)}
+                  className={`px-4 py-2 rounded-full ${colors.accent5} hover:${strongGlow} 
+                    transition-all duration-300 hover:bg-gray-700/50 hover:scale-105
+                    backdrop-blur-sm border border-gray-600 hover:border-gray-400 text-sm font-medium
+                    bg-gray-800/60 shadow-lg hover:shadow-xl`}
+                >
+                  {showAllTabs ? (
+                    <>
+                      <span className="mr-1">▲</span> Show Less
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-1">▼</span> Show More ({hiddenTabsCount})
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Active tab indicator */}
+            <div className="mt-3 text-center">
+              <div className="h-0.5 bg-gradient-to-r from-transparent via-current to-transparent animate-pulse rounded-full opacity-50 max-w-xs mx-auto"></div>
             </div>
           </div>
         </nav>
