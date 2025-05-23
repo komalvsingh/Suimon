@@ -15,6 +15,7 @@ import PokemonGymBattle from "./game/PokemonGymBrawler.jsx";
 import PokemonBattle from "./brawl/PokemonBattle.jsx";
 import { Web3Provider } from "./game/web3Context.jsx";
 import PokemonPuzzleRush from "./components/BattleArena.jsx";
+import MemeDAOInterface from "./pages/DAO.jsx";
 
 function App() {
   const [activeTab, setActiveTab] = useState("wallet");
@@ -120,10 +121,11 @@ function App() {
             {[
               { id: "wallet", name: "Wallet" },
               { id: "creatures", name: "Creatures" },
-              { id: "battle", name: "Battle Arena" },
+              { id: "battle", name: "Pokemon Puzzle Rush" },
               { id: "leaderboard", name: "Leaderboard" },
               { id: "pokidesk", name: "My PokiDesk" },
               { id: "starter-picker", name: "Mint Starter" },
+              { id: "dao", name: "Dao" },
               { id: "tcg", name: "Pokemon Game-tcg" },
               { id: "gym-brawler", name: "Gym Brawler" },
               { id: "pokemon-brawl", name: "Pokemon Brawl" },
@@ -170,6 +172,11 @@ function App() {
             {activeTab === "starter-picker" && (
               <div className="animate-fadeIn">
                 <StarterPickerPage />
+              </div>
+            )}
+            {activeTab === "dao" && (
+              <div className="animate-fadeIn">
+                <MemeDAOInterface />
               </div>
             )}
             {activeTab === "tcg" && (
