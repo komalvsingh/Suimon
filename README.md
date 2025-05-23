@@ -1,109 +1,138 @@
 # 🚀 Suimon: A Decentralized Gaming & Governance Platform
 
-> A full-stack Web3 game and DAO platform powered by Sui blockchain and Move smart contracts.
+> Play. Earn. Evolve. Govern — in a full-stack Web3 experience on Sui.
 
 ---
 
 ## 📌 Problem Statement
 
-Traditional web games and community governance systems are often centralized, lacking transparency, user ownership, and real-time interaction with game economies. There’s a gap in merging engaging gameplay with on-chain governance, ownership, and direct player participation in shaping the platform.
+Web2 games offer fun but lack real ownership, transparency, and community governance. In Web3, current platforms either over-focus on DeFi or NFTs without providing engaging gameplay. There’s also friction in payments — wallet addresses are confusing and hard to share, making SUI transactions less intuitive.
 
 ---
 
 ## 🎯 Objective
 
-To build an interactive, decentralized platform where users can:
+To create a fully gamified Web3 platform where:
 
-* Play blockchain-integrated games
-* Participate in DAO governance
-* Own and trade NFTs and in-game tokens
-* Experience real-time, transparent blockchain interactions
+- Players **mint and evolve NFT avatars**
+- Earn **EXP** through interactive games
+- Make **frictionless payments** using human-readable usernames
+- Participate in **DAO-based governance**
 
-**Target Users:**
-Gamers, Web3 enthusiasts, and community members who value transparency, decentralization, and asset ownership.
+**Track:** 🕹️ Degen + Digital Payments  
+**Users:** Gamers, NFT enthusiasts, and Web3 users seeking fun + financial freedom + control
 
 ---
 
 ## 🧠 Team & Approach
 
-### Team Name:
-
-`BlockBrawlers`
+### Team Name: `BlockBrawlers`
 
 ### Team Members:
 
-* Aaryan Sharma – Full Stack Dev ([GitHub](#) / [LinkedIn](#))
-* Priya Kapoor – Smart Contract Dev
-* Rohan Mehta – Frontend/UI Lead
+- 👩‍💼 Komal Singh – Team Lead, Full Stack Dev
+- 👨‍💻 Aaryan Kalbhor – Full Stack Dev
+- 👨‍💻 Aditya Gupta – Full Stack Dev
+- 👨‍💻 Dhruv Maurya – Full Stack Dev
 
-### Your Approach:
+### Approach:
 
-* Designed modular architecture separating gameplay, DAO, and utilities
-* Integrated Sui wallet and on-chain DAO logic using Move
-* Encountered challenges in syncing real-time on-chain state with UI
-* Iterated rapidly using Vite, Tailwind, and custom hooks to streamline UX
+- 🕹️ **Game-first Web3 Design** — Focused on engaging gameplay mechanics that tie directly to EXP and NFT evolution
+- 💳 **Move-based Payment Aliases** — Human-readable usernames (e.g., `/@realplayer`) for simplified SUI transfers
+- 🔁 **Reactive NFT Updates** — EXP earned in real time updates NFT metadata to reflect evolution
+- 🛠️ **Custom Sui API Hooks** — Optimized frontend performance using debounce and state sync logic
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Core Technologies Used:
+### Core Technologies:
 
-* **Frontend**: React (Vite), Tailwind CSS, PostCSS
-* **Backend**: Move Smart Contracts on Sui Blockchain
-* **Database**: On-chain data storage via Sui
-* **APIs**: `@mysten/sui`, `@mysten/sui.js` for blockchain interactions
-* **Hosting**: Vercel / IPFS (for decentralized frontend hosting)
+- **Frontend:** React (Vite), Tailwind CSS
+- **Smart Contracts:** Move (Sui Blockchain)
+- **Blockchain Interaction:** `@mysten/sui.js`
+- **Data Storage:** On-chain NFT metadata and EXP stats
+- **Hosting:** Vercel + IPFS (for decentralized front-end)
 
-### Sponsor Technologies Used:
+### Sponsor Technologies:
 
-* **Sui Blockchain**:
-
-  * Used for wallet integration, DAO logic, token transfers, and NFT minting
-  * Smart contracts written in Move and deployed via Sui packages
-  * Utilized standard Sui modules (coin, prover, cryptography)
+- **Sui Blockchain**
+  - NFT minting & metadata evolution
+  - EXP mechanics
+  - Username-based SUI transfers
+  - DAO voting modules
 
 ---
 
 ## ✨ Key Features
 
-* ✅ On-chain DAO Governance (proposals, voting, execution)
-* ✅ Blockchain Gaming (PvP-style “Brawl” battle system)
-* ✅ Wallet & Token Integration (connect, transact, and view assets)
-* ✅ NFT Ownership & Display (minting and usage in-game)
+- ✅ **Degen Games for EXP** — Addictive games that reward EXP and progress NFT avatars
+- ✅ **Starter NFTs** — Choose from `Charmander`, `Bulbasaur`, or `Squirtle` to begin your journey
+- ✅ **NFT Evolution System** — Progression and appearance updates as EXP is earned
+- ✅ **Username-Based SUI Payments** — Send SUI via `/@username` (no complex wallet address)
+- ✅ **DAO Governance** — Vote on events, roadmap, feature unlocks, and rewards
+- ✅ **Blockchain Gaming** — PvP-style “Brawl” battle system
+
+---
+
+## 🎮 Game Modes
+
+### 1. 🧩 Pokémon Puzzle Rush
+- Candy Crush-style puzzle game
+- Match elemental energy to charge attacks
+- Once charged, attack AI Pokémon to earn EXP
+
+### 2. 🃏 TCG (Trading Card Game)
+- 1v1 turn-based battle against AI using cards
+- Use strategy to play 4 cards and defeat the enemy
+- Win = EXP for your NFT avatar
+
+### 3. ⚔️ Pokémon Brawl (PvP-lite)
+- 5-level battle tower mode
+- Draw from 3 cards each turn:
+  - ⚔️ Attack Boost
+  - 🛡️ Defense Boost
+  - 💊 Heal
+  - 💥 Opponent Damage Debuff
+- Choose a card + action (Attack/Defend) to defeat enemy Pokémon
+
+### 4. 🏆 Pokémon Gym Battle Mode
+- Similar to classic ROM-style format
+- Choose a starter → Catch wild Pokémon → Heal & rest
+- Battle gyms as checkpoints
+- Get 6 Pokémon, win 8 gym badges = victory!
+- Reset to start a new journey if desired
 
 ---
 
 ## 📽️ Demo & Deliverables
 
-* **Demo Video Link:** \[Coming Soon]
-* **Pitch Deck / PPT Link:** \[Coming Soon]
+- **Demo Video:** [Coming Soon]
+- **Pitch Deck:** [Coming Soon]
 
 ---
 
-## 🧬 Future Scope
+## 🔮 Future Scope
 
-* 📈 Multi-chain compatibility and more game modes
-* 🛡️ Advanced DAO security measures & dispute resolution
-* 🌐 Localization support & accessibility for non-crypto users
+- 🌱 Expanded NFT evolution trees (rarity-based)
+- 🔐 Username 2FA + Social Recovery options
+- 📱 Mobile-first PWA + Multi-language support
 
 ---
 
 ## 📎 Resources / Credits
 
-* [Sui Documentation](https://docs.sui.io/)
-* `@mysten/sui` libraries
-* React, Tailwind CSS, Vite
-* Inspiration from Pokémon, Lootverse mechanics
+- [Sui Official Docs](https://docs.sui.io/)
+- Libraries: `@mysten/sui.js`, TailwindCSS, React, Move
+- Game inspiration from Pokémon, Compound DAO, NounsDAO
+- Hosting: Vercel + IPFS
 
 ---
 
 ## 🏁 Final Words
 
-Suimon started as a fusion of a card-battle game and DAO governance. We loved blending narrative gaming with real ownership. It was challenging but rewarding to explore Move’s potential and build something that lets communities *play and decide* together.
+Building **Suimon** was a nostalgic yet futuristic experience. From minting our first `Charmander` to earning EXP through battle wins, every detail was crafted for community-driven gameplay. With username-based SUI payments and true NFT ownership, we’re bridging fun, freedom, and finance.
 
-Big thanks to the Sui ecosystem and open-source community!
+> Play more. Evolve more. Govern together. That’s Suimon.
 
 ---
-
-Let me know if you want this in Markdown format or need help embedding your screenshots or links!
