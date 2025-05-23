@@ -26,7 +26,7 @@ To create a fully gamified Web3 platform where:
 
 ## 🧠 Team & Approach
 
-### Team Name: `BlockBrawlers`
+### Team Name: `Bithereum`
 
 ### Team Members:
 
@@ -34,6 +34,7 @@ To create a fully gamified Web3 platform where:
 - 👨‍💻 Aaryan Kalbhor – Full Stack Dev
 - 👨‍💻 Aditya Gupta – Full Stack Dev
 - 👨‍💻 Dhruv Maurya – Full Stack Dev
+- 👩‍💼 Roma Shirodkar –  Full Stack Dev
 
 ### Approach:
 
@@ -52,7 +53,7 @@ To create a fully gamified Web3 platform where:
 - **Smart Contracts:** Move (Sui Blockchain)
 - **Blockchain Interaction:** `@mysten/sui.js`
 - **Data Storage:** On-chain NFT metadata and EXP stats
-- **Hosting:** Vercel + IPFS (for decentralized front-end)
+- **Hosting:** Vercel (for decentralized front-end)
 
 ### Sponsor Technologies:
 
